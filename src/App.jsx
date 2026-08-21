@@ -1,154 +1,1885 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import {
+  LayoutDashboard,
+  Tractor,
+  Truck,
+  CalendarDays,
+  CreditCard,
+  HelpCircle,
+  User,
+  Users,
+  Bell,
+  Globe,
+  Search,
+  SlidersHorizontal,
+  ShieldCheck,
+  CheckCircle2,
+  Clock,
+  MapPin,
+  Star,
+  Wrench,
+  Gauge,
+  Zap,
+  Sparkles,
+  PhoneCall,
+  Send,
+  ArrowRight,
+  ChevronRight,
+  ChevronDown,
+  Check,
+  X,
+  Menu,
+  LogOut,
+  FileText,
+  AlertCircle,
+  TrendingUp,
+  SunMedium,
+  Droplets,
+  Navigation,
+  Compass,
+  FileCheck,
+  IndianRupee,
+  Eye,
+  RefreshCw,
+  Award,
+  Filter,
+  CheckCircle,
+  Phone,
+  MessageSquare,
+  Bot,
+  PlayCircle,
+  BadgeCheck,
+  ShieldAlert,
+  Fuel
+} from "lucide-react";
 
-const symbol = (character) => function SymbolIcon() {
-  return <span className="glyph" aria-hidden="true">{character}</span>;
-};
+// ============================================================================
+// DATA & ASSETS
+// ============================================================================
 
-const Bell = symbol("●");
-const Bot = symbol("✦");
-const CalendarDays = symbol("▣");
-const ChevronRight = symbol("›");
-const CircleHelp = symbol("?");
-const Clock3 = symbol("◷");
-const CreditCard = symbol("▤");
-const Gauge = symbol("◉");
-const Headphones = symbol("☏");
-const IndianRupee = symbol("₹");
-const Languages = symbol("文");
-const LayoutDashboard = symbol("▦");
-const LocateFixed = symbol("⌾");
-const LogIn = symbol("↪");
-const MapPin = symbol("⌖");
-const Menu = symbol("☰");
-const PackageCheck = symbol("✓");
-const Search = symbol("⌕");
-const ShieldCheck = symbol("◆");
-const Star = symbol("★");
-const Tractor = symbol("🚜");
-const Truck = symbol("🚚");
-const UserRound = symbol("○");
-const UsersRound = symbol("◎");
-const Wrench = symbol("⚒");
-const X = symbol("×");
-
-const navigation = [
-  ["dashboard", "Overview", LayoutDashboard],
-  ["machines", "Find machinery", Tractor],
-  ["booking", "My bookings", CalendarDays],
-  ["payments", "Payments", CreditCard],
-  ["tracking", "Track delivery", Truck],
-  ["support", "Help & learning", CircleHelp],
+const machineryData = [
+  {
+    id: "m-1",
+    name: "Mahindra 575 DI XP Plus",
+    brand: "Mahindra Tractors",
+    type: "Heavy Tractor",
+    category: "tractors",
+    hp: 47,
+    owner: "Sri Murugan Agro Services",
+    ownerRating: 4.9,
+    reviewsCount: 124,
+    distance: "2.4 km away",
+    distanceKm: 2.4,
+    pricePerHour: 1250,
+    pricePerDay: 8500,
+    location: "Vallam Road, Thanjavur",
+    image: "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80",
+    verified: true,
+    fuelType: "Diesel DI",
+    operatorAvailable: true,
+    availabilityStatus: "Available Today",
+    tag: "Most Popular",
+    specs: ["47 HP Engine", "Dual Clutch", "High Fuel Economy", "2WD / 4WD Ready"]
+  },
+  {
+    id: "m-2",
+    name: "John Deere 5310 PowerTech",
+    brand: "John Deere",
+    type: "Heavy Tractor",
+    category: "tractors",
+    hp: 55,
+    owner: "Green Field Agri Rentals",
+    ownerRating: 4.8,
+    reviewsCount: 89,
+    distance: "4.8 km away",
+    distanceKm: 4.8,
+    pricePerHour: 1550,
+    pricePerDay: 10500,
+    location: "Kumbakonam Highway",
+    image: "https://images.unsplash.com/photo-1589874837836-e8a34d7159f8?auto=format&fit=crop&w=800&q=80",
+    verified: true,
+    fuelType: "Turbo Diesel",
+    operatorAvailable: true,
+    availabilityStatus: "Available Today",
+    tag: "High Torque",
+    specs: ["55 HP 4WD", "Power Steering", "2000kg Lift Capacity", "Reverse PTO"]
+  },
+  {
+    id: "m-3",
+    name: "Kubota MU4501 E-CDIS",
+    brand: "Kubota",
+    type: "Utility Tractor",
+    category: "tractors",
+    hp: 45,
+    owner: "Cauvery Farm Machinery",
+    ownerRating: 4.9,
+    reviewsCount: 76,
+    distance: "5.2 km away",
+    distanceKm: 5.2,
+    pricePerHour: 1400,
+    pricePerDay: 9200,
+    location: "Papanasam Road",
+    image: "https://images.unsplash.com/photo-1544984243-ec57ea16fe25?auto=format&fit=crop&w=800&q=80",
+    verified: true,
+    fuelType: "E-CDIS Engine",
+    operatorAvailable: true,
+    availabilityStatus: "Available Today",
+    tag: "Low Vibration",
+    specs: ["45 HP Japanese Engine", "4WD", "Ultra Smooth Clutch", "Paddy Field Special"]
+  },
+  {
+    id: "m-4",
+    name: "Shaktiman Semi-Champion Rotavator",
+    brand: "Shaktiman",
+    type: "Tillage Equipment",
+    category: "tillage",
+    hp: 40,
+    owner: "Kaveri Farm Implements",
+    ownerRating: 4.7,
+    reviewsCount: 62,
+    distance: "6.1 km away",
+    distanceKm: 6.1,
+    pricePerHour: 750,
+    pricePerDay: 4800,
+    location: "Orathanadu Bypass",
+    image: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=800&q=80",
+    verified: true,
+    fuelType: "Implement",
+    operatorAvailable: false,
+    availabilityStatus: "Available Tomorrow",
+    tag: "Best for Soil Prep",
+    specs: ["7 Feet Width", "48 Boron Blades", "8-inch Working Depth", "Gear Drive"]
+  },
+  {
+    id: "m-5",
+    name: "Preet 987 Combine Harvester",
+    brand: "Preet Agro",
+    type: "Combine Harvester",
+    category: "harvesters",
+    hp: 101,
+    owner: "Thanjavur Delta Harvesters",
+    ownerRating: 4.9,
+    reviewsCount: 145,
+    distance: "8.5 km away",
+    distanceKm: 8.5,
+    pricePerHour: 2800,
+    pricePerDay: 19500,
+    location: "Budalur Road",
+    image: "https://images.unsplash.com/photo-1628352081506-83c43123ed6d?auto=format&fit=crop&w=800&q=80",
+    verified: true,
+    fuelType: "Heavy Diesel",
+    operatorAvailable: true,
+    availabilityStatus: "Available Today",
+    tag: "Harvest Special",
+    specs: ["101 HP Engine", "14ft Cutter Bar", "2400L Grain Tank", "Paddy & Wheat"]
+  },
+  {
+    id: "m-6",
+    name: "Aspee Tractor Boom Sprayer 500L",
+    brand: "Aspee",
+    type: "Crop Sprayer",
+    category: "sprayers",
+    hp: 35,
+    owner: "Kisan Seva Tools",
+    ownerRating: 4.6,
+    reviewsCount: 38,
+    distance: "3.7 km away",
+    distanceKm: 3.7,
+    pricePerHour: 650,
+    pricePerDay: 4200,
+    location: "Medical College Road",
+    image: "https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=800&q=80",
+    verified: true,
+    fuelType: "Implement",
+    operatorAvailable: true,
+    availabilityStatus: "Available Today",
+    tag: "Precise Spray",
+    specs: ["500L Poly Tank", "12m Boom Width", "Triple Nozzle System", "Auto Pressure Control"]
+  }
 ];
 
-const machinery = [
-  { name: "Mahindra 575 DI", type: "Tractor", owner: "Sri Murugan Agro Services", distance: "2.4 km", price: "₹1,250", rating: "4.9", tone: "red" },
-  { name: "John Deere 5310", type: "Tractor", owner: "Green Field Rentals", distance: "4.8 km", price: "₹1,500", rating: "4.8", tone: "green" },
-  { name: "Shaktiman Rotavator", type: "Tillage", owner: "Kaveri Farm Tools", distance: "6.1 km", price: "₹750", rating: "4.7", tone: "gold" },
+const navigationItems = [
+  { id: "dashboard", label: "Overview", icon: LayoutDashboard },
+  { id: "machines", label: "Find Machinery", icon: Tractor, badge: "6 Active" },
+  { id: "booking", label: "Bookings", icon: CalendarDays, badge: "1 Active" },
+  { id: "payments", label: "Payments & Escrow", icon: CreditCard },
+  { id: "tracking", label: "Live Telematics", icon: Truck, badge: "Live" },
+  { id: "support", label: "Help & Kisan AI", icon: HelpCircle },
 ];
 
-const roleContent = {
-  Farmer: ["Good morning, Ravi", "Book machinery early and avoid peak-season shortages.", ["2 active bookings", "18 hours saved", "24 nearby machines"]],
-  "Machinery owner": ["Welcome back, Murugan", "Two rental requests are waiting for confirmation.", ["6 listed machines", "₹34.8k this month", "78% utilisation"]],
-  "Delivery person": ["Your route is ready", "Three equipment movements are scheduled today.", ["3 trips today", "1 completed", "42 km remaining"]],
-  Administrator: ["FarmIQ operations", "Four verification requests need review.", ["1,248 active users", "86 live rentals", "4 open issues"]],
+const roleWorkspaces = {
+  Farmer: {
+    greeting: "Good morning, Ravi Kumar",
+    subtitle: "Ideal sowing conditions today in Thanjavur. Check verified equipment available for immediate dispatch.",
+    metrics: [
+      { label: "Active Bookings", value: "02", sub: "1 In-Transit arriving 10:40 AM", icon: CalendarDays, type: "emerald", trend: "+1 this week" },
+      { label: "Hours Saved", value: "18.5 hrs", sub: "Compared to manual harvesting", icon: Clock, type: "amber", trend: "High efficiency" },
+      { label: "Nearby Equipment", value: "24 Units", sub: "Within 10 km radius", icon: MapPin, type: "blue", trend: "100% verified" }
+    ]
+  },
+  "Machinery Owner": {
+    greeting: "Welcome back, Murugan",
+    subtitle: "2 new rental requests require your confirmation for Mahindra 575 DI.",
+    metrics: [
+      { label: "Listed Equipment", value: "06 Units", sub: "4 currently on field", icon: Tractor, type: "emerald", trend: "66% active" },
+      { label: "This Month Revenue", value: "₹34,800", sub: "Next payout in 2 days", icon: IndianRupee, type: "amber", trend: "+18.4% vs last mo" },
+      { label: "Fleet Utilisation", value: "78.2%", sub: "Above district average", icon: Gauge, type: "blue", trend: "+5.1% efficiency" }
+    ]
+  },
+  "Delivery Partner": {
+    greeting: "Route Ready, Suresh Kumar",
+    subtitle: "3 equipment movements scheduled today. Mahindra 575 DI is in transit to Ravi's farm.",
+    metrics: [
+      { label: "Assigned Trips", value: "03 Trips", sub: "1 in transit, 2 scheduled", icon: Truck, type: "emerald", trend: "On schedule" },
+      { label: "Completed Deliveries", value: "268", sub: "4.9 ★ verified rating", icon: CheckCircle2, type: "amber", trend: "Top partner" },
+      { label: "Distance Remaining", value: "42 km", sub: "Estimated fuel 4.8 L", icon: Navigation, type: "blue", trend: "Optimized route" }
+    ]
+  },
+  Administrator: {
+    greeting: "FarmIQ Operations Control",
+    subtitle: "4 equipment owner verifications and 2 safety inspection audits awaiting review.",
+    metrics: [
+      { label: "Active Farmers", value: "1,248", sub: "84 new this week", icon: Users, type: "emerald", trend: "+12.3% MoM" },
+      { label: "Live Rentals", value: "86 Live", sub: "Across 4 Delta districts", icon: Tractor, type: "amber", trend: "Zero disputes" },
+      { label: "Safety Compliance", value: "99.4%", sub: "All machinery inspected", icon: ShieldCheck, type: "blue", trend: "Certified" }
+    ]
+  }
 };
+
+// ============================================================================
+// MAIN APP COMPONENT
+// ============================================================================
 
 export default function App() {
   const [screen, setScreen] = useState("dashboard");
   const [role, setRole] = useState("Farmer");
-  const [menuOpen, setMenuOpen] = useState(false);
-  const title = useMemo(() => navigation.find(([id]) => id === screen)?.[1] || "Account", [screen]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedMachine, setSelectedMachine] = useState(machineryData[0]);
+  const [language, setLanguage] = useState("en"); // 'en' | 'ta' | 'hi'
 
-  const openScreen = (next) => {
-    setScreen(next);
-    setMenuOpen(false);
+  const activeNav = useMemo(
+    () => navigationItems.find((item) => item.id === screen) || { label: "My Profile" },
+    [screen]
+  );
+
+  const navigateTo = (screenId, machine = null) => {
+    if (machine) setSelectedMachine(machine);
+    setScreen(screenId);
+    setMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${menuOpen ? "open" : ""}`}>
-        <div className="brand"><span><Tractor /></span><div><strong>FarmIQ</strong><small>Smart farm access</small></div><button className="mobile-close" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X /></button></div>
-        <p className="nav-label">WORKSPACE</p>
-        <nav>
-          {navigation.map(([id, label, Icon]) => (
-            <button key={id} className={screen === id ? "active" : ""} onClick={() => openScreen(id)}><Icon />{label}</button>
-          ))}
-        </nav>
-        <div className="role-switch"><UsersRound /><label>Viewing as<select value={role} onChange={(event) => { setRole(event.target.value); openScreen("dashboard"); }}>{Object.keys(roleContent).map((name) => <option key={name}>{name}</option>)}</select></label></div>
-        <div className="phone-help"><Headphones /><strong>Need help booking?</strong><small>Tamil support line</small><a href="tel:18001234567">1800 123 4567</a></div>
-      </aside>
-      {menuOpen && <button className="scrim" onClick={() => setMenuOpen(false)} aria-label="Close menu" />}
+      {/* SIDEBAR NAVIGATION */}
+      <aside className={`sidebar ${mobileMenuOpen ? "open" : ""}`}>
+        <div className="brand">
+          <div className="brand-icon-box">
+            <Tractor size={24} strokeWidth={2.2} />
+          </div>
+          <div>
+            <strong>FarmIQ</strong>
+            <small>Smart Farm Machinery & Telematics</small>
+          </div>
+          <button
+            className="mobile-close-btn"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Close menu"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
+        <p className="nav-label">Agri-Workspace</p>
+        <nav>
+          {navigationItems.map((item) => {
+            const IconComponent = item.icon;
+            const isActive = screen === item.id;
+            return (
+              <button
+                key={item.id}
+                className={`nav-item ${isActive ? "active" : ""}`}
+                onClick={() => navigateTo(item.id)}
+              >
+                <span className="nav-item-content">
+                  <IconComponent size={18} />
+                  <span>{item.label}</span>
+                </span>
+                {item.badge && <span className="nav-badge">{item.badge}</span>}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* ROLE SWITCHER */}
+        <div className="role-switch-container">
+          <div className="role-switch-header">
+            <Users size={14} />
+            <span>Switch Workspace View</span>
+          </div>
+          <select
+            className="role-select"
+            value={role}
+            onChange={(e) => {
+              setRole(e.target.value);
+              navigateTo("dashboard");
+            }}
+          >
+            {Object.keys(roleWorkspaces).map((roleName) => (
+              <option key={roleName} value={roleName}>
+                {roleName} Workspace
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* REGIONAL SUPPORT BANNER */}
+        <div className="support-banner">
+          <div className="support-banner-header">
+            <PhoneCall size={14} />
+            <span>Kisan Helpline 24/7</span>
+          </div>
+          <p>Assisted booking in Tamil, Hindi & English</p>
+          <a href="tel:18001234567">
+            <Phone size={13} />
+            1800 123 4567 (Toll Free)
+          </a>
+        </div>
+      </aside>
+
+      {/* MOBILE SCRIM / BACKDROP */}
+      {mobileMenuOpen && (
+        <div
+          className="mobile-backdrop"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* MAIN VIEWPORT */}
       <main>
+        {/* TOPBAR */}
         <header className="topbar">
-          <button className="menu-button" onClick={() => setMenuOpen(true)} aria-label="Open menu"><Menu /></button>
-          <div><small>FARMIQ PLATFORM</small><h1>{title}</h1></div>
-          <div className="header-actions"><button><Languages /> English</button><button aria-label="Notifications"><Bell /></button><button className="profile" onClick={() => openScreen("account")}><span>RV</span><div><strong>Ravi Kumar</strong><small>Farmer · FQ1024</small></div></button></div>
+          <div className="topbar-left">
+            <button
+              className="menu-mobile-btn"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open Navigation Menu"
+            >
+              <Menu size={20} />
+            </button>
+            <div>
+              <span className="topbar-subtitle">FARMIQ ENTERPRISE PLATFORM</span>
+              <h1 className="topbar-title">{activeNav.label}</h1>
+            </div>
+          </div>
+
+          <div className="header-actions">
+            {/* LANGUAGE SELECTOR */}
+            <button
+              className="header-pill-btn"
+              onClick={() => setLanguage((l) => (l === "en" ? "ta" : l === "ta" ? "hi" : "en"))}
+              title="Change Language"
+            >
+              <Globe size={15} />
+              <span>{language === "en" ? "English" : language === "ta" ? "தமிழ் (Tamil)" : "हिंदी (Hindi)"}</span>
+            </button>
+
+            {/* NOTIFICATION ICON */}
+            <button className="icon-badge-btn" aria-label="View notifications">
+              <Bell size={17} />
+              <span className="icon-badge-dot" />
+            </button>
+
+            {/* USER PROFILE PILL */}
+            <button className="profile-pill" onClick={() => navigateTo("account")}>
+              <div className="profile-avatar">RK</div>
+              <div className="profile-text">
+                <span className="profile-name">Ravi Kumar</span>
+                <span className="profile-role">Farmer · Thanjavur (FQ1024)</span>
+              </div>
+            </button>
+          </div>
         </header>
-        <div className="content">
-          {screen === "dashboard" && <Dashboard role={role} openScreen={openScreen} />}
-          {screen === "machines" && <Machines openScreen={openScreen} />}
-          {screen === "booking" && <Booking openScreen={openScreen} />}
-          {screen === "payments" && <Payments openScreen={openScreen} />}
-          {screen === "tracking" && <Tracking />}
-          {screen === "support" && <Support />}
-          {screen === "account" && <Account openScreen={openScreen} />}
+
+        {/* ACTIVE SCREEN CONTENT */}
+        <div className="content-container">
+          {screen === "dashboard" && (
+            <DashboardScreen role={role} navigateTo={navigateTo} />
+          )}
+          {screen === "machines" && (
+            <MachinesScreen navigateTo={navigateTo} />
+          )}
+          {screen === "booking" && (
+            <BookingScreen
+              selectedMachine={selectedMachine}
+              navigateTo={navigateTo}
+            />
+          )}
+          {screen === "payments" && (
+            <PaymentsScreen navigateTo={navigateTo} />
+          )}
+          {screen === "tracking" && (
+            <TrackingScreen navigateTo={navigateTo} />
+          )}
+          {screen === "support" && (
+            <SupportScreen language={language} />
+          )}
+          {screen === "account" && (
+            <AccountScreen navigateTo={navigateTo} />
+          )}
         </div>
       </main>
     </div>
   );
 }
 
-function Dashboard({ role, openScreen }) {
-  const [heading, description, metrics] = roleContent[role];
-  return <div className="screen">
-    <section className="hero"><div><span>{role} workspace</span><h2>{heading}</h2><p>{description}</p><button className="primary" onClick={() => openScreen(role === "Farmer" ? "machines" : "booking")}><Search />{role === "Farmer" ? "Find a machine" : "View activity"}</button></div><div className="tractor-art"><i /><Tractor /></div></section>
-    <section className="metrics">{metrics.map((item, index) => <article key={item}><span>{index === 0 ? <CalendarDays /> : index === 1 ? <Clock3 /> : <MapPin />}</span><strong>{item.split(" ")[0]}</strong><small>{item.substring(item.indexOf(" ") + 1)}</small></article>)}</section>
-    {role === "Farmer" ? <div className="two-columns"><section><SectionTitle title="Recommended near you" subtitle="Verified machines around Thanjavur" /><div className="machine-list">{machinery.slice(0, 2).map((item) => <MachineCard key={item.name} machine={item} onBook={() => openScreen("booking")} />)}</div></section><section><SectionTitle title="Current booking" subtitle="Arriving today" /><article className="status-card"><div className="status-heading"><span><Tractor /></span><div><strong>Mahindra 575 DI</strong><small>#FQ-2048 · 6 hours</small></div><b>In transit</b></div><div className="steps"><i /><i /><i /><i /></div><div className="step-labels"><span>Confirmed</span><span>Picked up</span><span>On the way</span><span>Delivered</span></div><div className="arrival"><MapPin /><div><small>Estimated arrival</small><strong>Today, 10:40 AM</strong></div><button onClick={() => openScreen("tracking")}>Track live</button></div></article></section></div> : <RolePreview role={role} />}
-  </div>;
+// ============================================================================
+// 1. DASHBOARD SCREEN
+// ============================================================================
+
+function DashboardScreen({ role, navigateTo }) {
+  const currentRoleConfig = roleWorkspaces[role] || roleWorkspaces.Farmer;
+
+  return (
+    <div className="screen">
+      {/* ENTERPRISE HERO BANNER */}
+      <section className="hero-banner">
+        <div>
+          <div className="hero-tag">
+            <Sparkles size={13} />
+            <span>{role} Portal · Delta Agri-Zone</span>
+          </div>
+          <h2>{currentRoleConfig.greeting}</h2>
+          <p>{currentRoleConfig.subtitle}</p>
+          <div className="hero-actions">
+            <button
+              className="btn-primary btn-lg"
+              onClick={() =>
+                navigateTo(role === "Farmer" ? "machines" : "booking")
+              }
+            >
+              <Search size={16} />
+              {role === "Farmer" ? "Find Verified Machinery" : "Manage Active Operations"}
+            </button>
+            <button
+              className="btn-secondary"
+              onClick={() => navigateTo("tracking")}
+            >
+              <Truck size={16} />
+              View Live Telematics
+            </button>
+          </div>
+        </div>
+
+        {/* WEATHER & TELEMETRY WIDGET */}
+        <div className="hero-telemetry-box">
+          <div className="weather-badge">
+            <div className="weather-info">
+              <SunMedium size={28} style={{ color: "var(--amber-500)" }} />
+              <div>
+                <span className="weather-temp">31°C</span>
+                <span className="weather-desc"> · Sunny & Clear</span>
+              </div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <span style={{ fontSize: "12px", color: "var(--primary-400)", fontWeight: 600, display: "block" }}>Ideal Field Work</span>
+              <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)" }}>Thanjavur, TN</span>
+            </div>
+          </div>
+
+          <div className="telemetry-row">
+            <div className="telemetry-item">
+              <small>Soil Moisture</small>
+              <strong>64% Optimal</strong>
+            </div>
+            <div className="telemetry-item">
+              <small>Wind Speed</small>
+              <strong>11 km/h ENE</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* METRICS / KPI GRID */}
+      <section className="metrics-grid">
+        {currentRoleConfig.metrics.map((metric) => {
+          const IconComp = metric.icon;
+          return (
+            <article key={metric.label} className="metric-card">
+              <div className={`metric-icon-box ${metric.type}`}>
+                <IconComp size={22} />
+              </div>
+              <div className="metric-data">
+                <div className="metric-value">{metric.value}</div>
+                <div className="metric-label">{metric.label}</div>
+                <div className="metric-trend">
+                  <TrendingUp size={12} />
+                  <span>{metric.trend}</span>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </section>
+
+      {/* CONDITIONAL ROLE CONTENT */}
+      {role === "Farmer" && (
+        <div className="two-col-grid">
+          {/* RECOMMENDED EQUIPMENT */}
+          <section>
+            <div className="section-header">
+              <div className="section-title-group">
+                <h3>Recommended Machinery Near You</h3>
+                <p>Verified, certified operators available in Thanjavur & Papanasam</p>
+              </div>
+              <button
+                className="section-link-btn"
+                onClick={() => navigateTo("machines")}
+              >
+                View all ({machineryData.length}) <ChevronRight size={14} />
+              </button>
+            </div>
+
+            <div className="machine-list">
+              {machineryData.slice(0, 2).map((machine) => (
+                <MachineCardPro
+                  key={machine.id}
+                  machine={machine}
+                  onBook={() => navigateTo("booking", machine)}
+                />
+              ))}
+            </div>
+          </section>
+
+          {/* ACTIVE DISPATCH TRACKER */}
+          <section>
+            <div className="section-header">
+              <div className="section-title-group">
+                <h3>Active Booking Status</h3>
+                <p>Telemetry dispatch tracking · Order #FQ-2048</p>
+              </div>
+              <button
+                className="section-link-btn"
+                onClick={() => navigateTo("tracking")}
+              >
+                Full GPS Screen <ChevronRight size={14} />
+              </button>
+            </div>
+
+            <article className="status-card-pro">
+              <div className="status-card-header">
+                <div className="status-machine-info">
+                  <div className="status-icon-box">
+                    <Tractor size={22} />
+                  </div>
+                  <div>
+                    <span className="status-machine-title">Mahindra 575 DI XP Plus</span>
+                    <span className="status-sub">Assigned Operator: Suresh Kumar · 6 hrs rental</span>
+                  </div>
+                </div>
+                <span className="badge-in-transit">
+                  <span className="live-pulse" /> In Transit
+                </span>
+              </div>
+
+              {/* TIMELINE STEPPER */}
+              <div className="stepper-pro">
+                <div className="stepper-track" />
+                <div className="stepper-progress" />
+                <div className="step-node completed">
+                  <div className="step-dot">
+                    <Check size={14} />
+                  </div>
+                  <span className="step-title">Confirmed</span>
+                </div>
+                <div className="step-node completed">
+                  <div className="step-dot">
+                    <Check size={14} />
+                  </div>
+                  <span className="step-title">Inspected</span>
+                </div>
+                <div className="step-node current">
+                  <div className="step-dot">
+                    <Truck size={14} />
+                  </div>
+                  <span className="step-title">On The Way</span>
+                </div>
+                <div className="step-node">
+                  <div className="step-dot">4</div>
+                  <span className="step-title">Handover</span>
+                </div>
+              </div>
+
+              {/* ESTIMATED ARRIVAL BAR */}
+              <div className="eta-banner">
+                <div className="eta-left">
+                  <MapPin size={18} style={{ color: "var(--primary-600)" }} />
+                  <div className="eta-text">
+                    <small>Estimated Arrival at Ravi's Farm</small>
+                    <strong>Today, 10:40 AM (28 mins remaining)</strong>
+                  </div>
+                </div>
+                <button
+                  className="btn-primary"
+                  onClick={() => navigateTo("tracking")}
+                >
+                  Track Live GPS
+                </button>
+              </div>
+            </article>
+          </section>
+        </div>
+      )}
+
+      {role !== "Farmer" && (
+        <RoleWorkspaceDetail role={role} navigateTo={navigateTo} />
+      )}
+    </div>
+  );
 }
 
-function RolePreview({ role }) {
-  const rows = role === "Machinery owner" ? ["Review two rental requests", "Update machine availability", "View this month's earnings"] : role === "Delivery person" ? ["Pickup from Kaveri Farm Tools", "Deliver to Ravi Kumar farm", "Complete handover checklist"] : ["Review owner verifications", "Resolve payment complaints", "Check machine inspections"];
-  return <section className="role-preview"><SectionTitle title={`${role} tasks`} subtitle="Day 2 interface preview" />{rows.map((row, index) => <div key={row}><span>0{index + 1}</span><strong>{row}</strong><ChevronRight /></div>)}</section>;
+function RoleWorkspaceDetail({ role, navigateTo }) {
+  if (role === "Machinery Owner") {
+    return (
+      <div className="two-col-grid">
+        <section className="owner-pipeline-card">
+          <div className="section-title-group" style={{ marginBottom: "16px" }}>
+            <h3>Pending Rental Requests</h3>
+            <p>Review & confirm bookings to lock schedules</p>
+          </div>
+          <div className="pipeline-item">
+            <div className="pipeline-left">
+              <div className="status-icon-box">
+                <Tractor size={20} />
+              </div>
+              <div>
+                <strong>Mahindra 575 DI XP Plus</strong>
+                <p style={{ fontSize: "12px", color: "var(--slate-500)" }}>Ravi Kumar · 12 Aug (6 hrs) · Vallam Road</p>
+              </div>
+            </div>
+            <div className="pipeline-actions">
+              <button className="btn-secondary" style={{ padding: "6px 12px", fontSize: "12px" }}>
+                Decline
+              </button>
+              <button className="btn-primary" style={{ padding: "6px 14px", fontSize: "12px" }}>
+                Accept (₹7,500)
+              </button>
+            </div>
+          </div>
+          <div className="pipeline-item">
+            <div className="pipeline-left">
+              <div className="status-icon-box">
+                <Wrench size={20} />
+              </div>
+              <div>
+                <strong>Shaktiman Rotavator 7ft</strong>
+                <p style={{ fontSize: "12px", color: "var(--slate-500)" }}>Kavitha Farm · 14 Aug (8 hrs) · Papanasam</p>
+              </div>
+            </div>
+            <div className="pipeline-actions">
+              <button className="btn-secondary" style={{ padding: "6px 12px", fontSize: "12px" }}>
+                Decline
+              </button>
+              <button className="btn-primary" style={{ padding: "6px 14px", fontSize: "12px" }}>
+                Accept (₹6,000)
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="owner-pipeline-card">
+          <div className="section-title-group" style={{ marginBottom: "16px" }}>
+            <h3>Fleet Health & Telematics</h3>
+            <p>Real-time equipment status and scheduled maintenance</p>
+          </div>
+          <div className="pipeline-item">
+            <div>
+              <strong>Mahindra 575 DI (TN-49-AB-1024)</strong>
+              <p style={{ fontSize: "12px", color: "var(--slate-500)" }}>Next Service in 45 engine hours · Battery 96%</p>
+            </div>
+            <span className="machine-status-pill">Active on Field</span>
+          </div>
+          <div className="pipeline-item">
+            <div>
+              <strong>John Deere 5310 (TN-49-CD-3890)</strong>
+              <p style={{ fontSize: "12px", color: "var(--slate-500)" }}>Maintenance check cleared yesterday</p>
+            </div>
+            <span className="machine-status-pill" style={{ background: "#F1F5F9", color: "#475569", borderColor: "#CBD5E1" }}>
+              Idle at Depot
+            </span>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (role === "Delivery Partner") {
+    return (
+      <section className="owner-pipeline-card">
+        <div className="section-title-group" style={{ marginBottom: "16px" }}>
+          <h3>Today's Movement Manifest</h3>
+          <p>Pickup, inspection checklist, and delivery handover protocol</p>
+        </div>
+        <div className="pipeline-item">
+          <div className="pipeline-left">
+            <span style={{ fontSize: "18px", fontWeight: "bold", color: "var(--primary-700)" }}>01</span>
+            <div>
+              <strong>Dispatch Mahindra 575 DI to Ravi Kumar Farm</strong>
+              <p style={{ fontSize: "12px", color: "var(--slate-500)" }}>Pickup: Sri Murugan Agro · Drop: Vallam Road · 28 mins left</p>
+            </div>
+          </div>
+          <button className="btn-primary" onClick={() => navigateTo("tracking")}>
+            Open Live Nav
+          </button>
+        </div>
+        <div className="pipeline-item">
+          <div className="pipeline-left">
+            <span style={{ fontSize: "18px", fontWeight: "bold", color: "var(--slate-400)" }}>02</span>
+            <div>
+              <strong>Return Shaktiman Rotavator from Kaveri Farms</strong>
+              <p style={{ fontSize: "12px", color: "var(--slate-500)" }}>Scheduled 2:30 PM · Drop: Depot 2</p>
+            </div>
+          </div>
+          <button className="btn-secondary" style={{ padding: "6px 12px", fontSize: "12px" }}>
+            Checklist
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  // Administrator
+  return (
+    <section className="owner-pipeline-card">
+      <div className="section-title-group" style={{ marginBottom: "16px" }}>
+        <h3>Platform Compliance & Safety Audits</h3>
+        <p>Verification queue for new equipment listings and dispute resolutions</p>
+      </div>
+      <div className="pipeline-item">
+        <div>
+          <strong>Preet 987 Harvester - Document Verification</strong>
+          <p style={{ fontSize: "12px", color: "var(--slate-500)" }}>Owner: Thanjavur Delta Harvesters · RC Book & Insurance submitted</p>
+        </div>
+        <button className="btn-primary" style={{ padding: "6px 14px", fontSize: "12px" }}>
+          Approve Listing
+        </button>
+      </div>
+      <div className="pipeline-item">
+        <div>
+          <strong>Operator Certification Audit - 4 Applicants</strong>
+          <p style={{ fontSize: "12px", color: "var(--slate-500)" }}>Tamil Nadu Agriculture University Certification Review</p>
+        </div>
+        <button className="btn-secondary" style={{ padding: "6px 14px", fontSize: "12px" }}>
+          Review Badges
+        </button>
+      </div>
+    </section>
+  );
 }
 
-function Machines({ openScreen }) {
-  const [query, setQuery] = useState("");
-  const results = machinery.filter((item) => `${item.name} ${item.type}`.toLowerCase().includes(query.toLowerCase()));
-  return <div className="screen"><PageTitle label="MACHINERY MARKETPLACE" title="Find the right machine nearby" text="Compare verified equipment, hourly prices and availability." /><div className="search-bar"><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tractors, harvesters, tillage…" /><button><LocateFixed /> Within 10 km</button></div><div className="filter-row"><button className="selected">All machinery</button><button>Tractors</button><button>Harvesters</button><button>Tillage</button><button>Sprayers</button></div><p className="result-count">{results.length} machines found</p><div className="machine-list marketplace">{results.map((item) => <MachineCard key={item.name} machine={item} onBook={() => openScreen("booking")} detailed />)}</div></div>;
+// ============================================================================
+// 2. MACHINERY MARKETPLACE SCREEN
+// ============================================================================
+
+function MachinesScreen({ navigateTo }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [sortBy, setSortBy] = useState("recommended");
+
+  const categories = [
+    { id: "all", label: "All Equipment" },
+    { id: "tractors", label: "Heavy Tractors" },
+    { id: "harvesters", label: "Harvesters" },
+    { id: "tillage", label: "Tillage & Rotavators" },
+    { id: "sprayers", label: "Crop Sprayers" }
+  ];
+
+  const filteredMachines = useMemo(() => {
+    return machineryData
+      .filter((item) => {
+        const matchesCategory = activeCategory === "all" || item.category === activeCategory;
+        const matchesSearch =
+          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.owner.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+      })
+      .sort((a, b) => {
+        if (sortBy === "priceAsc") return a.pricePerHour - b.pricePerHour;
+        if (sortBy === "priceDesc") return b.pricePerHour - a.pricePerHour;
+        if (sortBy === "distance") return a.distanceKm - b.distanceKm;
+        if (sortBy === "rating") return b.ownerRating - a.ownerRating;
+        return 0;
+      });
+  }, [searchQuery, activeCategory, sortBy]);
+
+  return (
+    <div className="screen">
+      <div className="marketplace-header">
+        <span className="topbar-subtitle">EQUIPMENT MARKETPLACE</span>
+        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "28px", fontWeight: 700, margin: "4px 0 8px" }}>
+          Verified Agricultural Machinery
+        </h2>
+        <p style={{ color: "var(--slate-500)", fontSize: "14px" }}>
+          Instant booking with GPS delivery tracking, inspected implements, and optional certified operators.
+        </p>
+      </div>
+
+      {/* SEARCH & FILTER CONTROLS */}
+      <div className="search-filter-card">
+        <div className="search-input-row">
+          <div className="search-field-box">
+            <Search size={18} style={{ color: "var(--slate-400)" }} />
+            <input
+              type="text"
+              placeholder="Search tractors, combine harvesters, rotavators, brands..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} style={{ color: "var(--slate-400)" }}>
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: "flex", gap: "8px" }}>
+            <select
+              className="form-control"
+              style={{ minHeight: "44px", width: "170px" }}
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="recommended">Sort: Recommended</option>
+              <option value="distance">Nearest Distance</option>
+              <option value="priceAsc">Price: Low to High</option>
+              <option value="priceDesc">Price: High to Low</option>
+              <option value="rating">Highest Rated</option>
+            </select>
+          </div>
+        </div>
+
+        {/* CATEGORY PILLS */}
+        <div className="filter-pills-row">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              className={`filter-pill ${activeCategory === cat.id ? "active" : ""}`}
+              onClick={() => setActiveCategory(cat.id)}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* RESULTS COUNT & META */}
+      <div className="results-meta-bar">
+        <span className="results-count">
+          Showing <strong>{filteredMachines.length} verified machines</strong> near Thanjavur (10 km radius)
+        </span>
+        <span style={{ fontSize: "12px", color: "var(--slate-500)" }}>
+          <ShieldCheck size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px", color: "var(--primary-600)" }} />
+          100% Quality Inspected
+        </span>
+      </div>
+
+      {/* MACHINERY LIST */}
+      <div className="machine-list">
+        {filteredMachines.map((machine) => (
+          <MachineCardPro
+            key={machine.id}
+            machine={machine}
+            detailed
+            onBook={() => navigateTo("booking", machine)}
+          />
+        ))}
+
+        {filteredMachines.length === 0 && (
+          <div style={{ textAlign: "center", padding: "48px 24px", background: "var(--white)", borderRadius: "var(--radius-lg)" }}>
+            <AlertCircle size={36} style={{ color: "var(--slate-400)", margin: "0 auto 12px" }} />
+            <h3 style={{ fontSize: "16px", fontWeight: 700 }}>No machinery matched your filters</h3>
+            <p style={{ color: "var(--slate-500)", fontSize: "13px", marginTop: "4px" }}>
+              Try broadening your search query or reset the category filters.
+            </p>
+            <button
+              className="btn-secondary"
+              style={{ marginTop: "16px" }}
+              onClick={() => {
+                setSearchQuery("");
+                setActiveCategory("all");
+              }}
+            >
+              Reset Filters
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
-function MachineCard({ machine, onBook, detailed }) {
-  return <article className={`machine-card ${detailed ? "detailed" : ""}`}><div className={`machine-picture ${machine.tone}`}><small>{machine.type}</small><Tractor /></div><div className="machine-info"><span className="available">● Available today</span><h3>{machine.name}</h3><p>{machine.owner}</p><div className="machine-meta"><span><MapPin />{machine.distance}</span><span><Star />{machine.rating}</span><span><ShieldCheck />Verified</span></div>{detailed && <div className="specs"><span><Gauge />45 HP</span><span><Wrench />Inspected</span><span><UserRound />Operator available</span></div>}<footer><div><strong>{machine.price}</strong><small>/ hour</small></div><button className="primary" onClick={onBook}>View & book <ChevronRight /></button></footer></div></article>;
+function MachineCardPro({ machine, onBook, detailed = false }) {
+  return (
+    <article className="machine-card-pro">
+      <div className="machine-img-wrapper">
+        <img src={machine.image} alt={machine.name} className="machine-img" />
+        <span className="machine-type-chip">{machine.type}</span>
+        {machine.verified && (
+          <span className="machine-verified-badge">
+            <ShieldCheck size={12} />
+            <span>Verified</span>
+          </span>
+        )}
+      </div>
+
+      <div className="machine-body">
+        <div>
+          <div className="machine-top">
+            <div>
+              <h3 className="machine-name">{machine.name}</h3>
+              <p className="machine-owner">{machine.owner} · {machine.location}</p>
+            </div>
+            <span className="machine-status-pill">
+              <span className="live-pulse" />
+              {machine.availabilityStatus}
+            </span>
+          </div>
+
+          <div className="machine-specs-grid">
+            <div className="spec-item">
+              <Gauge size={14} />
+              <span>{machine.hp} Horsepower</span>
+            </div>
+            <div className="spec-item">
+              <MapPin size={14} />
+              <span>{machine.distance}</span>
+            </div>
+            <div className="spec-item">
+              <Star size={14} style={{ color: "var(--amber-500)", fill: "var(--amber-500)" }} />
+              <span><strong>{machine.ownerRating}</strong> ({machine.reviewsCount} reviews)</span>
+            </div>
+            <div className="spec-item">
+              <Fuel size={14} />
+              <span>{machine.fuelType}</span>
+            </div>
+          </div>
+
+          {detailed && machine.specs && (
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", margin: "6px 0 12px" }}>
+              {machine.specs.map((spec) => (
+                <span
+                  key={spec}
+                  style={{
+                    background: "var(--slate-100)",
+                    color: "var(--slate-700)",
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    padding: "3px 8px",
+                    borderRadius: "var(--radius-xs)"
+                  }}
+                >
+                  {spec}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="machine-footer">
+          <div className="price-box">
+            <span className="price-amount">₹{machine.pricePerHour.toLocaleString("en-IN")}</span>
+            <span className="price-unit">/ hour</span>
+          </div>
+
+          <button className="btn-primary" onClick={onBook}>
+            <span>Reserve Machinery</span>
+            <ChevronRight size={15} />
+          </button>
+        </div>
+      </div>
+    </article>
+  );
 }
 
-function Booking({ openScreen }) {
-  const [requested, setRequested] = useState(false);
-  if (requested) return <div className="success screen"><span><PackageCheck /></span><small>BOOKING REQUESTED</small><h2>Machine reserved</h2><p>Your request #FQ-2051 was sent to the owner.</p><article><strong>Mahindra 575 DI</strong><span>12 August · 8:00 AM · 6 hours</span></article><button className="primary" onClick={() => openScreen("payments")}>Continue to payment</button></div>;
-  return <div className="screen"><PageTitle label="BOOKING DETAILS" title="Reserve your machinery" text="Confirm the schedule and delivery details." /><div className="booking-layout"><section className="form-card"><div className="selected-machine"><span><Tractor /></span><div><small>Selected machine</small><strong>Mahindra 575 DI</strong><p>Sri Murugan Agro Services · 2.4 km</p></div><button onClick={() => openScreen("machines")}>Change</button></div><h3>Date and duration</h3><div className="form-grid"><label>Rental date<input type="date" defaultValue="2026-08-12" /></label><label>Start time<input type="time" defaultValue="08:00" /></label></div><label>Rental duration — 6 hours<input type="range" min="2" max="12" defaultValue="6" /></label><h3>Delivery location</h3><div className="location"><MapPin /><div><strong>Ravi Kumar's farm</strong><small>Vallam Road, Thanjavur, Tamil Nadu</small></div></div><label className="check"><input type="checkbox" defaultChecked /><span><strong>Add a verified operator</strong><small>+₹180 per hour</small></span></label></section><aside className="summary"><small>PRICE SUMMARY</small><h3>Transparent pricing</h3><p><span>Machine rental</span><strong>₹7,500</strong></p><p><span>Delivery & pickup</span><strong>₹600</strong></p><p><span>Verified operator</span><strong>₹1,080</strong></p><p className="discount"><span>First booking offer</span><strong>−₹500</strong></p><hr /><div><span>Total</span><strong>₹8,680</strong></div><em><ShieldCheck />UI demonstration only. No real payment or database is connected.</em><button className="primary full" onClick={() => setRequested(true)}>Request booking</button></aside></div></div>;
+// ============================================================================
+// 3. BOOKING ENGINE WITH LIVE QUOTE
+// ============================================================================
+
+function BookingScreen({ selectedMachine, navigateTo }) {
+  const machine = selectedMachine || machineryData[0];
+  const [rentalDate, setRentalDate] = useState("2026-08-25");
+  const [startTime, setStartTime] = useState("08:00");
+  const [durationHours, setDurationHours] = useState(6);
+  const [includeOperator, setIncludeOperator] = useState(true);
+  const [deliveryAddress, setDeliveryAddress] = useState("Ravi Kumar's Farm, Survey No 142/3, Vallam Road, Thanjavur");
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Dynamic Quote Calculation
+  const baseRental = machine.pricePerHour * durationHours;
+  const operatorFee = includeOperator ? 180 * durationHours : 0;
+  const deliveryLogistics = 600;
+  const seasonalDiscount = 500;
+  const grandTotal = baseRental + operatorFee + deliveryLogistics - seasonalDiscount;
+  const advanceAmount = Math.round(grandTotal * 0.5);
+  const balanceOnDelivery = grandTotal - advanceAmount;
+
+  if (isSubmitted) {
+    return (
+      <div className="screen" style={{ maxWidth: "640px", margin: "40px auto", textAlign: "center" }}>
+        <div
+          style={{
+            width: "72px",
+            height: "72px",
+            background: "var(--primary-50)",
+            color: "var(--primary-600)",
+            borderRadius: "var(--radius-full)",
+            display: "grid",
+            placeItems: "center",
+            margin: "0 auto 20px"
+          }}
+        >
+          <CheckCircle size={40} />
+        </div>
+
+        <span className="topbar-subtitle">RESERVATION CONFIRMED</span>
+        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "32px", fontWeight: 700, margin: "8px 0" }}>
+          Booking Request #FQ-2051 Created
+        </h2>
+        <p style={{ color: "var(--slate-600)", fontSize: "14px", lineHeight: "1.6", marginBottom: "24px" }}>
+          Your request has been dispatched to <strong>{machine.owner}</strong>. Complete the 50% advance payment to lock delivery schedule.
+        </p>
+
+        <div style={{ background: "var(--white)", border: "1px solid var(--slate-200)", borderRadius: "var(--radius-lg)", padding: "20px", textAlign: "left", marginBottom: "24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", borderBottom: "1px solid var(--slate-100)", paddingBottom: "12px" }}>
+            <div>
+              <strong style={{ fontSize: "16px", color: "var(--slate-900)" }}>{machine.name}</strong>
+              <p style={{ fontSize: "12px", color: "var(--slate-500)" }}>{rentalDate} · {startTime} ({durationHours} hours duration)</p>
+            </div>
+            <span className="machine-status-pill">Pending Advance</span>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", fontSize: "13px" }}>
+            <div>
+              <span style={{ color: "var(--slate-500)", display: "block" }}>50% Advance Token:</span>
+              <strong style={{ fontSize: "18px", color: "var(--primary-700)" }}>₹{advanceAmount.toLocaleString("en-IN")}</strong>
+            </div>
+            <div>
+              <span style={{ color: "var(--slate-500)", display: "block" }}>Balance upon Handover:</span>
+              <strong style={{ fontSize: "18px", color: "var(--slate-900)" }}>₹{balanceOnDelivery.toLocaleString("en-IN")}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+          <button className="btn-primary btn-lg" onClick={() => navigateTo("payments")}>
+            <CreditCard size={18} />
+            <span>Proceed to 50% Advance Payment</span>
+          </button>
+          <button className="btn-secondary" onClick={() => setIsSubmitted(false)}>
+            Edit Schedule
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen">
+      <div className="marketplace-header">
+        <span className="topbar-subtitle">BOOKING & SCHEDULE</span>
+        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "28px", fontWeight: 700, margin: "4px 0 8px" }}>
+          Reserve Agricultural Machinery
+        </h2>
+        <p style={{ color: "var(--slate-500)", fontSize: "14px" }}>
+          Set your farm location, rental duration, and optional certified operator.
+        </p>
+      </div>
+
+      <div className="booking-grid">
+        {/* FORM PANEL */}
+        <section className="form-panel">
+          {/* SELECTED MACHINE BANNER */}
+          <div className="selected-machine-banner">
+            <div className="selected-machine-meta">
+              <img src={machine.image} alt={machine.name} className="selected-thumb" />
+              <div>
+                <span className="topbar-subtitle" style={{ fontSize: "10px" }}>SELECTED EQUIPMENT</span>
+                <strong style={{ fontSize: "15px", display: "block", color: "var(--slate-900)" }}>{machine.name}</strong>
+                <p style={{ fontSize: "12px", color: "var(--slate-500)" }}>{machine.owner} · {machine.distance}</p>
+              </div>
+            </div>
+            <button
+              className="btn-secondary"
+              style={{ padding: "6px 12px", fontSize: "12px" }}
+              onClick={() => navigateTo("machines")}
+            >
+              Change Machine
+            </button>
+          </div>
+
+          <h3 className="form-panel-title">1. Schedule & Duration</h3>
+          <div className="form-row-2">
+            <div className="form-group">
+              <label>Rental Date</label>
+              <input
+                type="date"
+                className="form-control"
+                value={rentalDate}
+                onChange={(e) => setRentalDate(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label>Start Time</label>
+              <input
+                type="time"
+                className="form-control"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* DURATION RANGE SLIDER */}
+          <div className="range-slider-wrapper">
+            <div className="range-slider-header">
+              <span>Rental Duration</span>
+              <strong style={{ color: "var(--primary-700)" }}>
+                {durationHours} Hours (Est. {Math.round(durationHours * 1.2)} Acres Coverage)
+              </strong>
+            </div>
+            <input
+              type="range"
+              min="2"
+              max="16"
+              step="1"
+              className="range-input"
+              value={durationHours}
+              onChange={(e) => setDurationHours(Number(e.target.value))}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--slate-400)", marginTop: "6px" }}>
+              <span>2 hrs (Min)</span>
+              <span>8 hrs (Full Day)</span>
+              <span>16 hrs (2 Shifts)</span>
+            </div>
+          </div>
+
+          <h3 className="form-panel-title" style={{ marginTop: "24px" }}>2. Delivery Destination</h3>
+          <div className="form-group">
+            <label>Farm Address & Coordinates</label>
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                className="form-control"
+                value={deliveryAddress}
+                onChange={(e) => setDeliveryAddress(e.target.value)}
+                style={{ paddingLeft: "36px" }}
+              />
+              <MapPin size={16} style={{ position: "absolute", left: "12px", top: "14px", color: "var(--primary-600)" }} />
+            </div>
+          </div>
+
+          {/* OPERATOR TOGGLE */}
+          <label className="checkbox-card">
+            <input
+              type="checkbox"
+              checked={includeOperator}
+              onChange={(e) => setIncludeOperator(e.target.checked)}
+            />
+            <div className="checkbox-text">
+              <strong>Add Certified Equipment Operator (+₹180/hr)</strong>
+              <small>TNAU certified operator trained in precision tillage and safety protocols.</small>
+            </div>
+          </label>
+        </section>
+
+        {/* PRICE SUMMARY SIDEBAR */}
+        <aside className="summary-panel">
+          <span className="summary-eyebrow">TRANSPARENT PRICING</span>
+          <h3 className="summary-title">Cost Breakdown</h3>
+
+          <div className="summary-row">
+            <span>Machinery Rental ({durationHours} hrs × ₹{machine.pricePerHour})</span>
+            <strong>₹{baseRental.toLocaleString("en-IN")}</strong>
+          </div>
+
+          <div className="summary-row">
+            <span>Delivery & Depot Return (Flat)</span>
+            <strong>₹{deliveryLogistics.toLocaleString("en-IN")}</strong>
+          </div>
+
+          {includeOperator && (
+            <div className="summary-row">
+              <span>Certified Operator ({durationHours} hrs × ₹180)</span>
+              <strong>₹{operatorFee.toLocaleString("en-IN")}</strong>
+            </div>
+          )}
+
+          <div className="summary-row discount">
+            <span>First Booking Promo Discount</span>
+            <strong>−₹{seasonalDiscount.toLocaleString("en-IN")}</strong>
+          </div>
+
+          <hr className="summary-divider" />
+
+          <div className="summary-total">
+            <span>Estimated Total</span>
+            <strong>₹{grandTotal.toLocaleString("en-IN")}</strong>
+          </div>
+
+          {/* ADVANCE NOTE */}
+          <div style={{ background: "var(--primary-50)", border: "1px solid var(--primary-200)", borderRadius: "var(--radius-md)", padding: "12px", marginBottom: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", fontWeight: 700, color: "var(--primary-900)" }}>
+              <span>50% Advance Token Required:</span>
+              <span>₹{advanceAmount.toLocaleString("en-IN")}</span>
+            </div>
+            <p style={{ fontSize: "11px", color: "var(--primary-800)", marginTop: "4px" }}>
+              Remaining ₹{balanceOnDelivery.toLocaleString("en-IN")} payable after inspection upon delivery.
+            </p>
+          </div>
+
+          <div className="security-note">
+            <ShieldCheck size={18} style={{ color: "var(--primary-600)", flexShrink: 0 }} />
+            <span>FarmIQ 100% Escrow Guarantee: Full refund if machinery is delayed or fails inspection.</span>
+          </div>
+
+          <button className="btn-primary btn-full btn-lg" onClick={() => setIsSubmitted(true)}>
+            <span>Confirm & Request Booking</span>
+            <ArrowRight size={16} />
+          </button>
+        </aside>
+      </div>
+    </div>
+  );
 }
 
-function Payments({ openScreen }) {
-  const [method, setMethod] = useState("upi");
-  const methods = [["upi", "UPI", "Google Pay, PhonePe or any UPI app", IndianRupee], ["card", "Debit or credit card", "Visa, Mastercard and RuPay", CreditCard], ["cash", "Assisted cash payment", "Pay at a FarmIQ service point", UserRound]];
-  return <div className="screen"><PageTitle label="PAYMENT WIREFRAME" title="Advance-payment interface" text="This is a visual prototype. No payment gateway is connected." /><div className="payment-layout"><section className="form-card"><div className="secure-box"><ShieldCheck /><div><strong>50% advance · ₹4,340</strong><small>Booking #FQ-2051</small></div></div><h3>Select payment method</h3>{methods.map(([id, name, note, Icon]) => <button className={`payment-method ${method === id ? "selected" : ""}`} onClick={() => setMethod(id)} key={id}><i /><div><strong>{name}</strong><small>{note}</small></div><Icon /></button>)}<button className="primary full" onClick={() => openScreen("tracking")}>Continue prototype</button></section><aside className="trust"><small>FARMIQ PROTECTION</small><h3>Designed for trusted rentals</h3><p><ShieldCheck /><span><strong>Protected advance</strong>Planned for the Express and Supabase phase.</span></p><p><Wrench /><span><strong>Quality checked</strong>Machine inspection details remain visible.</span></p><p><Headphones /><span><strong>Human support</strong>Help remains available throughout the rental.</span></p></aside></div></div>;
+// ============================================================================
+// 4. PAYMENTS & ESCROW SCREEN
+// ============================================================================
+
+function PaymentsScreen({ navigateTo }) {
+  const [selectedMethod, setSelectedMethod] = useState("upi");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  const paymentMethods = [
+    {
+      id: "upi",
+      name: "UPI Instant Payment",
+      note: "Google Pay, PhonePe, Paytm, BHIM or any UPI App",
+      icon: IndianRupee,
+      badge: "Fastest & Recommended"
+    },
+    {
+      id: "card",
+      name: "Debit / Credit / Kisan Card",
+      note: "RuPay, Visa, MasterCard, State Bank Kisan Credit Card",
+      icon: CreditCard
+    },
+    {
+      id: "cash",
+      name: "Assisted Cash at Kisan Seva Kendra",
+      note: "Pay cash at authorized village CSC point with receipt",
+      icon: User
+    }
+  ];
+
+  const handlePay = () => {
+    setIsProcessing(true);
+    setTimeout(() => {
+      setIsProcessing(false);
+      setIsSuccess(true);
+    }, 1200);
+  };
+
+  if (isSuccess) {
+    return (
+      <div className="screen" style={{ maxWidth: "600px", margin: "40px auto", textAlign: "center" }}>
+        <div
+          style={{
+            width: "72px",
+            height: "72px",
+            background: "var(--primary-50)",
+            color: "var(--primary-600)",
+            borderRadius: "var(--radius-full)",
+            display: "grid",
+            placeItems: "center",
+            margin: "0 auto 20px"
+          }}
+        >
+          <CheckCircle2 size={40} />
+        </div>
+        <span className="topbar-subtitle">PAYMENT SUCCESSFUL</span>
+        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "30px", fontWeight: 700, margin: "8px 0" }}>
+          ₹4,340 Advance Protected in Escrow
+        </h2>
+        <p style={{ color: "var(--slate-600)", fontSize: "14px", marginBottom: "24px" }}>
+          Transaction Reference: <strong>TXN_FQ98472901</strong>. Delivery vehicle has been dispatched.
+        </p>
+
+        <button className="btn-primary btn-lg" onClick={() => navigateTo("tracking")}>
+          <Truck size={18} />
+          <span>Track Live Delivery GPS</span>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen">
+      <div className="marketplace-header">
+        <span className="topbar-subtitle">FINTECH & ESCROW GATEWAY</span>
+        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "28px", fontWeight: 700, margin: "4px 0 8px" }}>
+          50% Advance Payment
+        </h2>
+        <p style={{ color: "var(--slate-500)", fontSize: "14px" }}>
+          Booking #FQ-2051 · Funds remain locked in FarmIQ Escrow until machine delivery inspection is approved.
+        </p>
+      </div>
+
+      <div className="booking-grid">
+        <section className="form-panel">
+          <div style={{ background: "var(--primary-50)", border: "1px solid var(--primary-200)", padding: "16px", borderRadius: "var(--radius-md)", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <span className="topbar-subtitle" style={{ fontSize: "10px" }}>AMOUNT PAYABLE NOW</span>
+              <strong style={{ fontSize: "24px", color: "var(--primary-900)", display: "block" }}>₹4,340.00</strong>
+              <small style={{ color: "var(--primary-700)" }}>50% Advance token for Mahindra 575 DI (6 hrs)</small>
+            </div>
+            <ShieldCheck size={32} style={{ color: "var(--primary-700)" }} />
+          </div>
+
+          <h3 className="form-panel-title">Choose Payment Method</h3>
+          {paymentMethods.map((pm) => {
+            const IconComponent = pm.icon;
+            const isSelected = selectedMethod === pm.id;
+            return (
+              <button
+                key={pm.id}
+                className={`payment-method-card ${isSelected ? "selected" : ""}`}
+                onClick={() => setSelectedMethod(pm.id)}
+              >
+                <div className="payment-method-left">
+                  <span className="payment-radio-indicator" />
+                  <div>
+                    <strong style={{ fontSize: "14px", color: "var(--slate-900)", display: "block" }}>
+                      {pm.name}
+                    </strong>
+                    <small style={{ fontSize: "12px", color: "var(--slate-500)" }}>{pm.note}</small>
+                  </div>
+                </div>
+                <IconComponent size={20} style={{ color: "var(--slate-400)" }} />
+              </button>
+            );
+          })}
+
+          <button
+            className="btn-primary btn-full btn-lg"
+            style={{ marginTop: "16px" }}
+            onClick={handlePay}
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <span>Securing Transaction...</span>
+            ) : (
+              <>
+                <ShieldCheck size={18} />
+                <span>Pay ₹4,340 Securely</span>
+              </>
+            )}
+          </button>
+        </section>
+
+        {/* TRUST & PROTECTION SIDEBAR */}
+        <aside className="trust-hero-card">
+          <span className="summary-eyebrow" style={{ color: "var(--primary-400)" }}>FARMIQ PROTECTION</span>
+          <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "22px", fontWeight: 700, margin: "6px 0 16px" }}>
+            Guaranteed Trust in Every Rental
+          </h3>
+
+          <div className="trust-item">
+            <ShieldCheck size={24} />
+            <div>
+              <strong>Escrow Protection</strong>
+              <p>The machinery owner receives payment only after you confirm handover and inspection.</p>
+            </div>
+          </div>
+
+          <div className="trust-item">
+            <Wrench size={24} />
+            <div>
+              <strong>On-Field Replacement</strong>
+              <p>If machinery malfunctions during operation, an emergency replacement is dispatched immediately.</p>
+            </div>
+          </div>
+
+          <div className="trust-item">
+            <PhoneCall size={24} />
+            <div>
+              <strong>Live Tele-Support</strong>
+              <p>Regional language support advisors are on standby throughout your entire rental window.</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
 }
 
-function Tracking() {
-  return <div className="screen"><PageTitle label="TRACKING WIREFRAME" title="Your tractor is on the way" text="Booking #FQ-2048 · Expected in 28 minutes" /><div className="tracking-layout"><section className="map"><div className="road one" /><div className="road two" /><div className="route" /><span className="pin start"><Tractor />Pickup</span><span className="pin moving"><Truck />28 min</span><span className="pin end"><MapPin />Your farm</span></section><aside className="timeline"><div className="driver"><span>SK</span><div><small>Delivery partner</small><strong>Suresh Kumar</strong><p>★ 4.9 · 268 deliveries</p></div></div>{[[PackageCheck, "Booking confirmed", "8:05 AM"], [Tractor, "Machine picked up", "9:42 AM"], [Truck, "On the way", "Expected 10:40 AM"], [MapPin, "Delivery and inspection", "Pending"]].map(([Icon, title, time], index) => <div className={`timeline-item ${index < 3 ? "done" : ""}`} key={title}><i><Icon /></i><span><strong>{title}</strong><small>{time}</small></span></div>)}</aside></div></div>;
+// ============================================================================
+// 5. TELEMETRY & LIVE GPS TRACKING SCREEN
+// ============================================================================
+
+function TrackingScreen() {
+  const [speed, setSpeed] = useState(32);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSpeed(Math.floor(28 + Math.random() * 8));
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="screen">
+      <div className="marketplace-header">
+        <span className="topbar-subtitle">LIVE TELEMATICS & GPS TRACKER</span>
+        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "28px", fontWeight: 700, margin: "4px 0 8px" }}>
+          Mahindra 575 DI Dispatch Telematics
+        </h2>
+        <p style={{ color: "var(--slate-500)", fontSize: "14px" }}>
+          Booking #FQ-2048 · Route: Sri Murugan Depot → Ravi Kumar Farm, Thanjavur
+        </p>
+      </div>
+
+      <div className="booking-grid">
+        {/* TELEMETRY MAP CANVAS */}
+        <section className="telemetry-map-canvas">
+          <div className="map-grid-bg" />
+
+          {/* HUD OVERLAY */}
+          <div className="telemetry-hud-overlay">
+            <div className="hud-stat-pill">
+              <span className="live-pulse" />
+              <span>GPS Telemetry Active</span>
+            </div>
+            <div className="hud-stat-pill">
+              <Gauge size={14} style={{ color: "var(--primary-400)" }} />
+              <span>Speed: {speed} km/h</span>
+            </div>
+            <div className="hud-stat-pill">
+              <Clock size={14} style={{ color: "var(--amber-500)" }} />
+              <span>ETA: 28 mins (10:40 AM)</span>
+            </div>
+          </div>
+
+          {/* SVG ROUTE GRAPHIC */}
+          <svg className="map-route-svg" viewBox="0 0 800 480">
+            {/* Background Highway Lines */}
+            <path
+              d="M 50 400 Q 300 350 450 220 T 750 80"
+              fill="none"
+              stroke="#1e293b"
+              strokeWidth="24"
+              strokeLinecap="round"
+            />
+            <path
+              d="M 50 400 Q 300 350 450 220 T 750 80"
+              fill="none"
+              stroke="#334155"
+              strokeWidth="2"
+              strokeDasharray="8 8"
+            />
+
+            {/* Active GPS Route */}
+            <path
+              d="M 120 380 Q 280 320 420 230"
+              fill="none"
+              stroke="#059669"
+              strokeWidth="6"
+              strokeLinecap="round"
+            />
+            <path
+              d="M 420 230 Q 560 140 700 100"
+              fill="none"
+              stroke="#10b981"
+              strokeWidth="4"
+              strokeDasharray="6 6"
+              opacity="0.6"
+            />
+
+            {/* Origin Pin */}
+            <g transform="translate(120, 380)">
+              <circle r="12" fill="#047857" />
+              <circle r="5" fill="#ffffff" />
+              <text x="18" y="5" fill="#94a3b8" fontSize="11" fontWeight="600">
+                Depot Pickup (09:15 AM)
+              </text>
+            </g>
+
+            {/* Live Moving Vehicle */}
+            <g transform="translate(420, 230)">
+              <circle r="22" fill="#10b981" opacity="0.3" />
+              <circle r="14" fill="#064e3b" stroke="#34d399" strokeWidth="2.5" />
+              <text x="-4" y="4" fill="#ffffff" fontSize="11" fontWeight="bold">
+                🚜
+              </text>
+              <rect x="-40" y="-32" width="80" height="20" rx="4" fill="#0f172a" stroke="#334155" />
+              <text x="-32" y="-18" fill="#34d399" fontSize="10" fontWeight="bold">
+                In Transit · 4.2 km
+              </text>
+            </g>
+
+            {/* Destination Farm Pin */}
+            <g transform="translate(700, 100)">
+              <circle r="14" fill="#d97706" />
+              <circle r="5" fill="#ffffff" />
+              <text x="-120" y="5" fill="#f8fafc" fontSize="11" fontWeight="bold">
+                Ravi's Farm (Dropoff)
+              </text>
+            </g>
+          </svg>
+        </section>
+
+        {/* DRIVER & MILESTONE TIMELINE */}
+        <aside className="form-panel">
+          {/* DRIVER PROFILE */}
+          <div className="driver-profile-card">
+            <div className="driver-avatar">SK</div>
+            <div style={{ flex: 1 }}>
+              <span className="topbar-subtitle" style={{ fontSize: "10px" }}>CERTIFIED DRIVER / OPERATOR</span>
+              <strong style={{ fontSize: "14px", display: "block", color: "var(--slate-900)" }}>Suresh Kumar</strong>
+              <p style={{ fontSize: "12px", color: "var(--amber-700)" }}>★ 4.9 · 268 Verified Deliveries</p>
+            </div>
+            <a
+              href="tel:9876543210"
+              className="btn-primary"
+              style={{ padding: "8px 12px", fontSize: "12px" }}
+            >
+              <Phone size={14} />
+              Call
+            </a>
+          </div>
+
+          <h3 className="form-panel-title">Handover Milestones</h3>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "12px" }}>
+            <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+              <CheckCircle size={18} style={{ color: "var(--primary-600)", flexShrink: 0, marginTop: "2px" }} />
+              <div>
+                <strong style={{ fontSize: "13px", color: "var(--slate-900)", display: "block" }}>Order Confirmed & Payment Escrowed</strong>
+                <small style={{ color: "var(--slate-500)" }}>08:05 AM · Transferred to Sri Murugan Agro</small>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+              <CheckCircle size={18} style={{ color: "var(--primary-600)", flexShrink: 0, marginTop: "2px" }} />
+              <div>
+                <strong style={{ fontSize: "13px", color: "var(--slate-900)", display: "block" }}>Depot Safety Inspection Cleared</strong>
+                <small style={{ color: "var(--slate-500)" }}>09:15 AM · Fuel 92%, Tyres checked, MB Plough mounted</small>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+              <Truck size={18} style={{ color: "var(--primary-600)", flexShrink: 0, marginTop: "2px" }} />
+              <div>
+                <strong style={{ fontSize: "13px", color: "var(--primary-800)", display: "block" }}>On The Way (Highway NH-36)</strong>
+                <small style={{ color: "var(--slate-500)" }}>09:42 AM · 4.2 km remaining</small>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "12px", alignItems: "flex-start", opacity: 0.5 }}>
+              <MapPin size={18} style={{ color: "var(--slate-400)", flexShrink: 0, marginTop: "2px" }} />
+              <div>
+                <strong style={{ fontSize: "13px", color: "var(--slate-900)", display: "block" }}>Farm Handover & Work Start</strong>
+                <small style={{ color: "var(--slate-500)" }}>Expected 10:40 AM</small>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
 }
 
-function Support() {
-  return <div className="screen"><section className="support-hero"><div><small>HELP & LEARNING</small><h2>Support in the language you trust</h2><p>Booking help, machinery guidance and safety lessons through chat, audio or phone.</p></div><Languages /></section><div className="help-grid"><HelpCard icon={Bot} title="FarmIQ assistant" text="Answers for common booking and payment questions." /><HelpCard icon={Headphones} title="Regional support" text="Phone support in Tamil, Hindi and English." /><HelpCard icon={Wrench} title="Machine tutorials" text="Step-by-step operation and safety lessons." /></div><section className="chat"><header><Bot /><div><strong>FarmIQ Assistant</strong><small>UI demonstration</small></div></header><div><p>Vanakkam Ravi! How can I help with farm machinery today?</p><span><button>How do I book?</button><button>Explain advance payment</button><button>Safety tutorial</button></span></div><footer><input placeholder="Type your question…" /><button>Send</button></footer></section></div>;
+// ============================================================================
+// 6. SUPPORT & AI KISAN ASSISTANT SCREEN
+// ============================================================================
+
+function SupportScreen({ language }) {
+  const [messages, setMessages] = useState([
+    {
+      id: "1",
+      sender: "bot",
+      text: language === "ta"
+        ? "வணக்கம் ரவி! நான் FarmIQ விவசாய உதவியாளர். டிராக்டர் முன்பதிவு, 50% அட்வான்ஸ் அல்லது உபகரண வழிகாட்டுதலில் நான் உங்களுக்கு எவ்வாறு உதவ முடியும்?"
+        : language === "hi"
+        ? "नमस्ते रवि! मैं FarmIQ किसान सहायक हूँ। कृषि मशीनरी बुकिंग, अग्रिम भुगतान या संचालन ट्यूटोरियल में मैं आपकी क्या मदद कर सकता हूँ?"
+        : "Hello Ravi! I am your FarmIQ Agri-Assistant. How can I assist you with equipment reservations, 50% advance escrow, or machinery tutorials today?"
+    }
+  ]);
+  const [inputVal, setInputVal] = useState("");
+
+  const quickPrompts = [
+    "How does 50% advance escrow work?",
+    "Recommend tractor for 4 acres paddy land",
+    "What implements are available for rotavator?",
+    "How to verify equipment inspection?"
+  ];
+
+  const handleSend = (textToSend) => {
+    const text = textToSend || inputVal;
+    if (!text.trim()) return;
+
+    const userMsg = { id: Date.now().toString(), sender: "user", text };
+    setMessages((prev) => [...prev, userMsg]);
+    setInputVal("");
+
+    setTimeout(() => {
+      let reply = "Our support line is ready to assist you. ";
+      if (text.toLowerCase().includes("escrow") || text.toLowerCase().includes("advance")) {
+        reply = "With FarmIQ Escrow, your 50% advance is held securely in a bank-guaranteed account. The machinery owner only receives payment after the delivery person arrives at your farm and you approve the inspection checklist.";
+      } else if (text.toLowerCase().includes("paddy") || text.toLowerCase().includes("tractor")) {
+        reply = "For 4 acres of wet paddy field in Thanjavur, we recommend the Kubota MU4501 4WD (45 HP) or Mahindra 575 DI. Both offer high torque in muddy soil with minimal fuel consumption.";
+      } else {
+        reply = "I've logged your query. You can also connect directly with our regional agricultural specialist at toll-free 1800 123 4567.";
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        { id: (Date.now() + 1).toString(), sender: "bot", text: reply }
+      ]);
+    }, 600);
+  };
+
+  return (
+    <div className="screen">
+      <div className="marketplace-header">
+        <span className="topbar-subtitle">HELP, EDUCATION & AI KISAN ASSISTANT</span>
+        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "28px", fontWeight: 700, margin: "4px 0 8px" }}>
+          Agricultural Guidance in Your Language
+        </h2>
+        <p style={{ color: "var(--slate-500)", fontSize: "14px" }}>
+          Get instant answers on machinery operation, escrow security, or connect with agronomists.
+        </p>
+      </div>
+
+      {/* THREE HELP CHANNELS */}
+      <div className="help-grid-pro">
+        <div className="help-card-pro">
+          <div className="help-card-icon">
+            <Bot size={22} />
+          </div>
+          <h4>FarmIQ AI Agri-Bot</h4>
+          <p>Instant answers on machinery specs, soil suitability, and booking calculations.</p>
+          <span style={{ fontSize: "12px", fontWeight: "bold", color: "var(--primary-700)" }}>Available 24/7 in 3 Languages</span>
+        </div>
+
+        <div className="help-card-pro">
+          <div className="help-card-icon">
+            <PhoneCall size={22} />
+          </div>
+          <h4>Regional Phone Helpline</h4>
+          <p>Talk to local agronomists in Tamil, Hindi, or English for phone-assisted bookings.</p>
+          <a href="tel:18001234567" style={{ fontSize: "12px", fontWeight: "bold", color: "var(--primary-700)" }}>
+            Call 1800 123 4567 →
+          </a>
+        </div>
+
+        <div className="help-card-pro">
+          <div className="help-card-icon">
+            <PlayCircle size={22} />
+          </div>
+          <h4>Machinery Video Tutorials</h4>
+          <p>Step-by-step video lessons on operating rotavators, harvesters, and boom sprayers safely.</p>
+          <span style={{ fontSize: "12px", fontWeight: "bold", color: "var(--primary-700)" }}>12 Verified Modules</span>
+        </div>
+      </div>
+
+      {/* INTERACTIVE CHAT CONTAINER */}
+      <div className="chat-container-pro">
+        <div className="chat-header-pro">
+          <Bot size={20} />
+          <div>
+            <strong style={{ fontSize: "14px", display: "block" }}>FarmIQ AI Assistant</strong>
+            <small style={{ fontSize: "11px", color: "var(--primary-400)" }}>Active · Instant Response</small>
+          </div>
+        </div>
+
+        <div className="chat-body-pro">
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              style={{
+                alignSelf: msg.sender === "user" ? "flex-end" : "flex-start",
+                maxWidth: "80%"
+              }}
+            >
+              <div
+                style={{
+                  background: msg.sender === "user" ? "var(--primary-700)" : "var(--white)",
+                  color: msg.sender === "user" ? "var(--white)" : "var(--slate-800)",
+                  border: msg.sender === "user" ? "none" : "1px solid var(--slate-200)",
+                  padding: "12px 16px",
+                  borderRadius: msg.sender === "user" ? "14px 4px 14px 14px" : "4px 14px 14px 14px",
+                  fontSize: "13px",
+                  lineHeight: "1.5",
+                  boxShadow: "var(--shadow-xs)"
+                }}
+              >
+                {msg.text}
+              </div>
+            </div>
+          ))}
+
+          {/* QUICK PROMPT CHIPS */}
+          <div className="quick-prompts-row">
+            {quickPrompts.map((prompt) => (
+              <button
+                key={prompt}
+                className="quick-prompt-btn"
+                onClick={() => handleSend(prompt)}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="chat-footer-pro">
+          <input
+            type="text"
+            placeholder="Ask anything about farm machinery, advance payment, or soil prep..."
+            value={inputVal}
+            onChange={(e) => setInputVal(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          />
+          <button className="btn-primary" onClick={() => handleSend()}>
+            <Send size={15} />
+            <span>Send</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function Account({ openScreen }) {
-  const [register, setRegister] = useState(false);
-  return <div className="account screen"><section><Tractor /><small>WELCOME TO FARMIQ</small><h2>Modern machinery within every farmer's reach.</h2><p>Book trusted equipment, arrange delivery and receive help in your language.</p></section><form onSubmit={(event) => { event.preventDefault(); openScreen("dashboard"); }}><div className="tabs"><button type="button" className={!register ? "active" : ""} onClick={() => setRegister(false)}>Sign in</button><button type="button" className={register ? "active" : ""} onClick={() => setRegister(true)}>Register</button></div><h2>{register ? "Create your account" : "Sign in to FarmIQ"}</h2>{register && <label>Role<select><option>Farmer</option><option>Machinery owner</option><option>Delivery person</option></select></label>}<label>Mobile number<input placeholder="98765 43210" /></label><label>{register ? "Full name" : "Password"}<input type={register ? "text" : "password"} placeholder={register ? "Ravi Kumar" : "Enter password"} /></label><button className="primary full"><LogIn />Continue</button><small>Day 2 UI only — authentication is not connected yet.</small></form></div>;
-}
+// ============================================================================
+// 7. ACCOUNT & AUTHENTICATION PORTAL
+// ============================================================================
 
-function HelpCard({ icon: Icon, title, text }) { return <article className="help-card"><span><Icon /></span><h3>{title}</h3><p>{text}</p><button>Open <ChevronRight /></button></article>; }
-function PageTitle({ label, title, text }) { return <header className="page-title"><small>{label}</small><h2>{title}</h2><p>{text}</p></header>; }
-function SectionTitle({ title, subtitle }) { return <header className="section-title"><h3>{title}</h3><small>{subtitle}</small></header>; }
+function AccountScreen({ navigateTo }) {
+  const [isRegister, setIsRegister] = useState(false);
+  const [mobileNum, setMobileNum] = useState("98765 43210");
+  const [fullName, setFullName] = useState("Ravi Kumar");
+
+  return (
+    <div className="screen">
+      <div className="auth-split-wrapper">
+        {/* BRAND PROMISE HERO */}
+        <section className="auth-hero-panel">
+          <div>
+            <div className="brand-icon-box" style={{ marginBottom: "24px" }}>
+              <Tractor size={28} />
+            </div>
+            <span className="hero-tag">ENTERPRISE AGRI-TECH</span>
+            <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "36px", fontWeight: 700, margin: "12px 0 16px", lineHeight: "1.2" }}>
+              Modern Agricultural Machinery Within Every Farmer's Reach.
+            </h2>
+            <p style={{ color: "rgba(255,255,255,0.75)", fontSize: "14px", lineHeight: "1.6" }}>
+              Book trusted equipment, coordinate GPS delivery, and safeguard transactions with advance escrow.
+            </p>
+          </div>
+
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "20px" }}>
+            <div style={{ display: "flex", gap: "24px" }}>
+              <div>
+                <strong style={{ fontSize: "18px", color: "var(--primary-400)", display: "block" }}>1,240+</strong>
+                <small style={{ color: "rgba(255,255,255,0.6)" }}>Verified Farmers</small>
+              </div>
+              <div>
+                <strong style={{ fontSize: "18px", color: "var(--primary-400)", display: "block" }}>100%</strong>
+                <small style={{ color: "rgba(255,255,255,0.6)" }}>Escrow Protection</small>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* AUTH FORM */}
+        <form
+          className="auth-form-panel"
+          onSubmit={(e) => {
+            e.preventDefault();
+            navigateTo("dashboard");
+          }}
+        >
+          <div className="auth-tabs">
+            <button
+              type="button"
+              className={`auth-tab-btn ${!isRegister ? "active" : ""}`}
+              onClick={() => setIsRegister(false)}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              className={`auth-tab-btn ${isRegister ? "active" : ""}`}
+              onClick={() => setIsRegister(true)}
+            >
+              New Registration
+            </button>
+          </div>
+
+          <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "24px", fontWeight: 700, marginBottom: "6px" }}>
+            {isRegister ? "Create Your FarmIQ Profile" : "Sign In to FarmIQ"}
+          </h2>
+          <p style={{ color: "var(--slate-500)", fontSize: "13px", marginBottom: "20px" }}>
+            {isRegister ? "Select your workspace role to begin" : "Enter your mobile number to receive OTP"}
+          </p>
+
+          {isRegister && (
+            <div className="form-group">
+              <label>Select User Role</label>
+              <select className="form-control">
+                <option>Farmer (Rent & Track Equipment)</option>
+                <option>Machinery Owner (List & Earn)</option>
+                <option>Delivery Partner (Logistics & Handover)</option>
+              </select>
+            </div>
+          )}
+
+          <div className="form-group">
+            <label>Mobile Number</label>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="e.g. 98765 43210"
+              value={mobileNum}
+              onChange={(e) => setMobileNum(e.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>{isRegister ? "Full Name" : "OTP / Password"}</label>
+            <input
+              type={isRegister ? "text" : "password"}
+              className="form-control"
+              placeholder={isRegister ? "Ravi Kumar" : "••••••"}
+              value={isRegister ? fullName : "123456"}
+              onChange={(e) => isRegister && setFullName(e.target.value)}
+            />
+          </div>
+
+          <button className="btn-primary btn-full btn-lg" style={{ marginTop: "12px" }}>
+            <span>Continue to Workspace</span>
+            <ArrowRight size={16} />
+          </button>
+
+          <p style={{ textAlign: "center", fontSize: "11px", color: "var(--slate-400)", marginTop: "16px" }}>
+            By continuing, you agree to FarmIQ Terms of Service & Safety Escrow Rules.
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+}
