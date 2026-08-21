@@ -1,5 +1,14 @@
 # FarmIQ Project Requirements
 
+> Scope note: this document is planning only. Day 1 and Day 2 implement a React UI prototype with sample data. The Node.js/Express API and PostgreSQL database through Supabase will be created in a later phase.
+
+## Planned technical architecture
+
+- **Frontend:** React with Vite.
+- **Backend:** Node.js and Express, added after the UI is approved.
+- **Database:** PostgreSQL managed through Supabase, added with the backend.
+- **Current data:** static sample objects inside the React prototype; no records are stored.
+
 ## 1. Problem statement
 
 Small-scale farmers often cannot afford to own modern agricultural machinery. Existing rental options are fragmented, expensive during peak seasons, difficult to discover, and weak in delivery coordination, safe-operation training, and regional-language support. FarmIQ will provide one trusted platform where farmers can find, reserve, pay for, receive, and learn to operate nearby machinery.
@@ -101,7 +110,7 @@ Small-scale farmers often cannot afford to own modern agricultural machinery. Ex
 - Store timestamps in UTC and display them in the user's local timezone.
 - Log important payment, verification, and booking actions.
 
-## 8. Database requirements
+## 8. Future database requirements (planning only)
 
 | Table | Purpose | Essential fields |
 | --- | --- | --- |

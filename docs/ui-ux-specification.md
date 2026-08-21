@@ -122,4 +122,4 @@ The primary navigation contains Overview, Find machinery, My bookings, Payments,
 
 ## Prototype coverage
 
-The current interactive prototype implements the seven wireframes above, responsive layouts, role switching for all four user types, machinery search, booking confirmation, payment-method selection, live-tracking visualization, and support-chat interactions. It intentionally uses sample data and no persistent backend because database implementation belongs to the next development phase.
+The current lightweight React prototype implements the seven wireframes above, responsive layouts, role switching for all four user types, machinery search, booking confirmation, payment-method selection, live-tracking visualization, and support-chat interactions. It intentionally uses sample data only. Node.js, Express, PostgreSQL, and Supabase belong to a later development phase and are not installed yet.
