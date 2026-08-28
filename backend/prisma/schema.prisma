@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  fullName  String
+  role      String   @default("FARMER") // FARMER, OWNER, DRIVER, ADMIN
+  
+  // Geo-location for Farmer's farm or Driver's current location
+  latitude  Float?
+  longitude Float?
+  
+  // Relationships
+  machinery       Machinery[] // Equipment owned by this user
+  bookingsAsFarmer Booking[]   @relation("FarmerBookings")
+  bookingsAsDriver Booking[]   @relation("DriverBookings")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Machinery {
+  id           String   @id @default(uuid())
+  name         String
+  category     String   // TRACTOR, HARVESTER, TILLAGE
+  pricePerHour Float
+  horsepower   Int
+  isAvailable  Boolean  @default(true)
+  
+  // Geo-location for the machinery's current depot/parking spot
+  latitude     Float?
+  longitude    Float?
+  
+  ownerId      String
+  owner        User     @relation(fields: [ownerId], references: [id])
+  
+  bookings     Booking[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Booking {
+  id            String   @id @default(uuid())
+  status        String   @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
+  
+  durationHours Int
+  totalAmount   Float
+  advancePaid   Float    @default(0)
+  
+  // Ride/Booking Geo-Location
+  farmLat       Float?
+  farmLng       Float?
+  
+  farmerId      String
+  farmer        User     @relation("FarmerBookings", fields: [farmerId], references: [id])
+  
+  machineryId   String
+  machinery     Machinery @relation(fields: [machineryId], references: [id])
+
+  // Assignment
+  driverId      String?
+  driver        User?    @relation("DriverBookings", fields: [driverId], references: [id])
+
+  bookingDate   DateTime
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

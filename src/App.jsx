@@ -1,4 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 import {
   LayoutDashboard,
   Tractor,
@@ -794,8 +797,49 @@ function MachinesScreen({ navigateTo }) {
     { id: "sprayers", label: "Crop Sprayers" }
   ];
 
+  const [apiMachineryData, setApiMachineryData] = useState([]);
+  const [lat, setLat] = useState("10.7905");
+  const [lng, setLng] = useState("79.1378");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch from the backend when component mounts or lat/lng changes
+  const fetchNearbyMachinery = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`http://localhost:3000/api/machinery/nearby?lat=${lat}&lng=${lng}`);
+      const data = await res.json();
+      setApiMachineryData(data);
+    } catch (err) {
+      console.error("Error fetching machinery:", err);
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchNearbyMachinery();
+  }, []); // Initial load
+
   const filteredMachines = useMemo(() => {
-    return machineryData
+    // Map backend data to match the UI's expected format
+    const formattedData = apiMachineryData.map(m => ({
+      id: m.id,
+      name: m.name,
+      brand: m.name.split(" ")[0], // Simple mock
+      type: m.category,
+      category: m.category.toLowerCase() + "s", 
+      pricePerHour: m.pricePerHour,
+      horsepower: m.horsepower,
+      distanceKm: m.distance || 0,
+      distance: m.distance ? `${m.distance} km` : "Nearby",
+      owner: m.owner?.fullName || "Verified Owner",
+      ownerRating: 4.8,
+      image: "https://images.unsplash.com/photo-1592982537447-6f233c70f089?auto=format&fit=crop&q=80&w=800",
+      implements: ["Rotavator", "Cultivator"],
+      fuelType: "Diesel",
+      badges: m.distance <= 2 ? ["Fast Dispatch", "Top Rated"] : ["Verified"]
+    }));
+
+    return formattedData
       .filter((item) => {
         const matchesCategory = activeCategory === "all" || item.category === activeCategory;
         const matchesSearch =
@@ -812,7 +856,7 @@ function MachinesScreen({ navigateTo }) {
         if (sortBy === "rating") return b.ownerRating - a.ownerRating;
         return 0;
       });
-  }, [searchQuery, activeCategory, sortBy]);
+  }, [searchQuery, activeCategory, sortBy, apiMachineryData]);
 
   return (
     <div className="screen">
@@ -824,6 +868,34 @@ function MachinesScreen({ navigateTo }) {
         <p style={{ color: "var(--slate-500)", fontSize: "14px" }}>
           Instant booking with GPS delivery tracking, inspected implements, and optional certified operators.
         </p>
+
+        {/* GEO-LOCATION SEARCH WIDGET */}
+        <div style={{ marginTop: "16px", display: "flex", gap: "12px", alignItems: "center", background: "var(--primary-50)", padding: "12px 16px", borderRadius: "8px", border: "1px solid var(--primary-200)" }}>
+          <MapPin size={20} style={{ color: "var(--primary-700)" }} />
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <span style={{ fontSize: "13px", fontWeight: "bold", color: "var(--primary-900)" }}>My Farm GPS:</span>
+            <input 
+              type="text" 
+              value={lat} 
+              onChange={e => setLat(e.target.value)} 
+              placeholder="Lat (e.g. 10.79)" 
+              style={{ width: "90px", padding: "4px 8px", border: "1px solid var(--slate-300)", borderRadius: "4px", fontSize: "12px" }}
+            />
+            <input 
+              type="text" 
+              value={lng} 
+              onChange={e => setLng(e.target.value)} 
+              placeholder="Lng (e.g. 79.13)" 
+              style={{ width: "90px", padding: "4px 8px", border: "1px solid var(--slate-300)", borderRadius: "4px", fontSize: "12px" }}
+            />
+            <button 
+              onClick={fetchNearbyMachinery}
+              style={{ background: "var(--primary-600)", color: "white", border: "none", padding: "6px 16px", borderRadius: "4px", fontSize: "12px", fontWeight: "bold", cursor: "pointer" }}
+            >
+              {isLoading ? "Scanning..." : "Find Nearest"}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* SEARCH & FILTER CONTROLS */}
@@ -872,6 +944,36 @@ function MachinesScreen({ navigateTo }) {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* DISCOVERY MAP WIDGET */}
+      <div style={{ height: "300px", borderRadius: "12px", overflow: "hidden", border: "1px solid var(--slate-200)", marginBottom: "20px" }}>
+        <MapContainer center={[parseFloat(lat), parseFloat(lng)]} zoom={12} style={{ height: "100%", width: "100%", zIndex: 1 }}>
+          <TileLayer
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+          />
+          {/* Farm Pin */}
+          <Marker position={[parseFloat(lat), parseFloat(lng)]}>
+            <Popup><strong>My Farm</strong></Popup>
+          </Marker>
+
+          {/* Machinery Pins */}
+          {apiMachineryData.map(m => {
+            if (m.latitude && m.longitude) {
+              return (
+                <Marker key={m.id} position={[m.latitude, m.longitude]}>
+                  <Popup>
+                    <strong>{m.name}</strong><br/>
+                    {m.distance} km away<br/>
+                    ₹{m.pricePerHour}/hr
+                  </Popup>
+                </Marker>
+              );
+            }
+            return null;
+          })}
+        </MapContainer>
       </div>
 
       {/* RESULTS COUNT & META */}
@@ -1285,12 +1387,34 @@ function PaymentsScreen({ navigateTo }) {
     }
   ];
 
-  const handlePay = () => {
+  const handlePay = async () => {
     setIsProcessing(true);
-    setTimeout(() => {
+    
+    // Simulate payment delay
+    await new Promise(resolve => setTimeout(resolve, 1200));
+
+    try {
+      // Create actual booking on the backend
+      const res = await fetch('http://localhost:3000/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          farmLat: 10.7905, 
+          farmLng: 79.1378, 
+          machineryId: "123", // Ideally passed from props, using mock
+          durationHours: 6,
+          totalAmount: 4340,
+          advancePaid: 2170
+        })
+      });
+      await res.json();
+      
       setIsProcessing(false);
       setIsSuccess(true);
-    }, 1200);
+    } catch (err) {
+      console.error("Payment API Error", err);
+      setIsProcessing(false);
+    }
   };
 
   if (isSuccess) {
@@ -1312,10 +1436,10 @@ function PaymentsScreen({ navigateTo }) {
         </div>
         <span className="topbar-subtitle">PAYMENT SUCCESSFUL</span>
         <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "30px", fontWeight: 700, margin: "8px 0" }}>
-          ₹4,340 Advance Protected in Escrow
+          Advance Protected in Escrow
         </h2>
         <p style={{ color: "var(--slate-600)", fontSize: "14px", marginBottom: "24px" }}>
-          Transaction Reference: <strong>TXN_FQ98472901</strong>. Delivery vehicle has been dispatched.
+          Transaction Reference: <strong>TXN_FQ98472901</strong>. Escrow locked and nearest driver assigned!
         </p>
 
         <button className="btn-primary btn-lg" onClick={() => navigateTo("tracking")}>
@@ -1431,128 +1555,81 @@ function PaymentsScreen({ navigateTo }) {
 // ============================================================================
 
 function TrackingScreen() {
-  const [speed, setSpeed] = useState(32);
+  const [ride, setRide] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setSpeed(Math.floor(28 + Math.random() * 8));
-    }, 3000);
-    return () => clearInterval(timer);
+    // Automatically fetch the latest assigned ride and driver
+    const fetchRide = async () => {
+      try {
+        const res = await fetch('http://localhost:3000/api/rides');
+        const rides = await res.json();
+        const activeRide = rides.find(r => r.status === 'ASSIGNED') || rides[0];
+        setRide(activeRide);
+      } catch (err) {
+        console.error(err);
+      }
+      setLoading(false);
+    };
+
+    fetchRide();
+    const interval = setInterval(fetchRide, 5000); // Live update every 5s
+    return () => clearInterval(interval);
   }, []);
+
+  if (loading) return <div className="screen" style={{ padding: 40, textAlign: "center" }}>Loading Live Satellite Feed...</div>;
+  if (!ride) return <div className="screen" style={{ padding: 40, textAlign: "center" }}>No active dispatch found.</div>;
+
+  const farmPos = [ride.farmLat || 10.7905, ride.farmLng || 79.1378];
+  const driverPos = [ride.driver?.latitude || 10.7950, ride.driver?.longitude || 79.1400];
+  const bounds = L.latLngBounds([farmPos, driverPos]);
 
   return (
     <div className="screen">
       <div className="marketplace-header">
         <span className="topbar-subtitle">LIVE TELEMATICS & GPS TRACKER</span>
         <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "28px", fontWeight: 700, margin: "4px 0 8px" }}>
-          Mahindra 575 DI Dispatch Telematics
+          {ride.machinery?.name || 'Machinery'} Dispatch
         </h2>
         <p style={{ color: "var(--slate-500)", fontSize: "14px" }}>
-          Booking #FQ-2048 · Route: Sri Murugan Depot → Ravi Kumar Farm, Thanjavur
+          Booking #{ride.id.substring(0,8).toUpperCase()} · Routing via Geo-Sat Array
         </p>
       </div>
 
       <div className="booking-grid">
-        {/* TELEMETRY MAP CANVAS */}
-        <section className="telemetry-map-canvas">
-          <div className="map-grid-bg" />
-
-          {/* HUD OVERLAY */}
-          <div className="telemetry-hud-overlay">
-            <div className="hud-stat-pill">
-              <span className="live-pulse" />
-              <span>GPS Telemetry Active</span>
-            </div>
-            <div className="hud-stat-pill">
-              <Gauge size={14} style={{ color: "var(--primary-400)" }} />
-              <span>Speed: {speed} km/h</span>
-            </div>
-            <div className="hud-stat-pill">
-              <Clock size={14} style={{ color: "var(--amber-500)" }} />
-              <span>ETA: 28 mins (10:40 AM)</span>
-            </div>
-          </div>
-
-          {/* SVG ROUTE GRAPHIC */}
-          <svg className="map-route-svg" viewBox="0 0 800 480">
-            {/* Background Highway Lines */}
-            <path
-              d="M 50 400 Q 300 350 450 220 T 750 80"
-              fill="none"
-              stroke="#1e293b"
-              strokeWidth="24"
-              strokeLinecap="round"
+        {/* LEAFLET MAP */}
+        <section style={{ height: "480px", borderRadius: "16px", overflow: "hidden", border: "1px solid var(--slate-200)" }}>
+          <MapContainer bounds={bounds} zoom={13} style={{ height: "100%", width: "100%", zIndex: 1 }}>
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+              attribution='&copy; <a href="https://carto.com/">CARTO</a>'
             />
-            <path
-              d="M 50 400 Q 300 350 450 220 T 750 80"
-              fill="none"
-              stroke="#334155"
-              strokeWidth="2"
-              strokeDasharray="8 8"
-            />
-
-            {/* Active GPS Route */}
-            <path
-              d="M 120 380 Q 280 320 420 230"
-              fill="none"
-              stroke="#059669"
-              strokeWidth="6"
-              strokeLinecap="round"
-            />
-            <path
-              d="M 420 230 Q 560 140 700 100"
-              fill="none"
-              stroke="#10b981"
-              strokeWidth="4"
-              strokeDasharray="6 6"
-              opacity="0.6"
-            />
-
-            {/* Origin Pin */}
-            <g transform="translate(120, 380)">
-              <circle r="12" fill="#047857" />
-              <circle r="5" fill="#ffffff" />
-              <text x="18" y="5" fill="#94a3b8" fontSize="11" fontWeight="600">
-                Depot Pickup (09:15 AM)
-              </text>
-            </g>
-
-            {/* Live Moving Vehicle */}
-            <g transform="translate(420, 230)">
-              <circle r="22" fill="#10b981" opacity="0.3" />
-              <circle r="14" fill="#064e3b" stroke="#34d399" strokeWidth="2.5" />
-              <text x="-4" y="4" fill="#ffffff" fontSize="11" fontWeight="bold">
-                🚜
-              </text>
-              <rect x="-40" y="-32" width="80" height="20" rx="4" fill="#0f172a" stroke="#334155" />
-              <text x="-32" y="-18" fill="#34d399" fontSize="10" fontWeight="bold">
-                In Transit · 4.2 km
-              </text>
-            </g>
-
-            {/* Destination Farm Pin */}
-            <g transform="translate(700, 100)">
-              <circle r="14" fill="#d97706" />
-              <circle r="5" fill="#ffffff" />
-              <text x="-120" y="5" fill="#f8fafc" fontSize="11" fontWeight="bold">
-                Ravi's Farm (Dropoff)
-              </text>
-            </g>
-          </svg>
+            {/* Driver Marker */}
+            <Marker position={driverPos}>
+              <Popup><strong>{ride.driver?.fullName}</strong><br/>En route with equipment.</Popup>
+            </Marker>
+            
+            {/* Farm Marker */}
+            <Marker position={farmPos}>
+              <Popup><strong>Destination (Your Farm)</strong></Popup>
+            </Marker>
+            
+            {/* Route Line */}
+            <Polyline positions={[driverPos, farmPos]} color="var(--primary-600)" weight={4} dashArray="8, 8" />
+          </MapContainer>
         </section>
 
         {/* DRIVER & MILESTONE TIMELINE */}
         <aside className="form-panel">
-          {/* DRIVER PROFILE */}
           <div className="driver-profile-card">
-            <div className="driver-avatar">SK</div>
+            <div className="driver-avatar">{ride.driver?.fullName.substring(0, 2).toUpperCase() || 'DR'}</div>
             <div style={{ flex: 1 }}>
-              <span className="topbar-subtitle" style={{ fontSize: "10px" }}>CERTIFIED DRIVER / OPERATOR</span>
-              <strong style={{ fontSize: "14px", display: "block", color: "var(--slate-900)" }}>Suresh Kumar</strong>
-              <p style={{ fontSize: "12px", color: "var(--amber-700)" }}>★ 4.9 · 268 Verified Deliveries</p>
+              <span className="topbar-subtitle" style={{ fontSize: "10px" }}>ASSIGNED OPERATOR</span>
+              <strong style={{ fontSize: "14px", display: "block", color: "var(--slate-900)" }}>{ride.driver?.fullName || 'Assigning...'}</strong>
+              <p style={{ fontSize: "12px", color: "var(--amber-700)" }}>★ 4.9 · {ride.driver?.phone || 'Connecting'}</p>
             </div>
             <a
-              href="tel:9876543210"
+              href={`tel:${ride.driver?.phone}`}
               className="btn-primary"
               style={{ padding: "8px 12px", fontSize: "12px" }}
             >
@@ -1561,38 +1638,30 @@ function TrackingScreen() {
             </a>
           </div>
 
-          <h3 className="form-panel-title">Handover Milestones</h3>
+          <h3 className="form-panel-title" style={{ marginTop: "24px" }}>Active Handover Pipeline</h3>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "12px" }}>
             <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
               <CheckCircle size={18} style={{ color: "var(--primary-600)", flexShrink: 0, marginTop: "2px" }} />
               <div>
-                <strong style={{ fontSize: "13px", color: "var(--slate-900)", display: "block" }}>Order Confirmed & Payment Escrowed</strong>
-                <small style={{ color: "var(--slate-500)" }}>08:05 AM · Transferred to Sri Murugan Agro</small>
+                <strong style={{ fontSize: "13px", color: "var(--slate-900)", display: "block" }}>Payment Escrowed</strong>
+                <small style={{ color: "var(--slate-500)" }}>₹{ride.advancePaid} locked for {ride.machinery?.name}</small>
               </div>
             </div>
 
             <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
               <CheckCircle size={18} style={{ color: "var(--primary-600)", flexShrink: 0, marginTop: "2px" }} />
               <div>
-                <strong style={{ fontSize: "13px", color: "var(--slate-900)", display: "block" }}>Depot Safety Inspection Cleared</strong>
-                <small style={{ color: "var(--slate-500)" }}>09:15 AM · Fuel 92%, Tyres checked, MB Plough mounted</small>
+                <strong style={{ fontSize: "13px", color: "var(--slate-900)", display: "block" }}>Smart Driver Assigned</strong>
+                <small style={{ color: "var(--slate-500)" }}>Matched with closest operator: {ride.driver?.fullName}</small>
               </div>
             </div>
 
             <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
               <Truck size={18} style={{ color: "var(--primary-600)", flexShrink: 0, marginTop: "2px" }} />
               <div>
-                <strong style={{ fontSize: "13px", color: "var(--primary-800)", display: "block" }}>On The Way (Highway NH-36)</strong>
-                <small style={{ color: "var(--slate-500)" }}>09:42 AM · 4.2 km remaining</small>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: "12px", alignItems: "flex-start", opacity: 0.5 }}>
-              <MapPin size={18} style={{ color: "var(--slate-400)", flexShrink: 0, marginTop: "2px" }} />
-              <div>
-                <strong style={{ fontSize: "13px", color: "var(--slate-900)", display: "block" }}>Farm Handover & Work Start</strong>
-                <small style={{ color: "var(--slate-500)" }}>Expected 10:40 AM</small>
+                <strong style={{ fontSize: "13px", color: "var(--primary-800)", display: "block" }}>On The Way (GPS Live)</strong>
+                <small style={{ color: "var(--slate-500)" }}>Driver tracking ping updated 2s ago</small>
               </div>
             </div>
           </div>
