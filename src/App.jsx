@@ -56,13 +56,15 @@ import {
   Fuel
 } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
 // ============================================================================
 // DATA & ASSETS
 // ============================================================================
 
 const machineryData = [
   {
-    id: "m-1",
+    id: "mach-001",
     name: "Mahindra 575 DI XP Plus",
     brand: "Mahindra Tractors",
     type: "Heavy Tractor",
@@ -85,7 +87,7 @@ const machineryData = [
     specs: ["47 HP Engine", "Dual Clutch", "High Fuel Economy", "2WD / 4WD Ready"]
   },
   {
-    id: "m-2",
+    id: "mach-002",
     name: "John Deere 5310 PowerTech",
     brand: "John Deere",
     type: "Heavy Tractor",
@@ -99,7 +101,7 @@ const machineryData = [
     pricePerHour: 1550,
     pricePerDay: 10500,
     location: "Kumbakonam Highway",
-    image: "https://images.unsplash.com/photo-1589874837836-e8a34d7159f8?auto=format&fit=crop&w=800&q=80",
+    image: "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80",
     verified: true,
     fuelType: "Turbo Diesel",
     operatorAvailable: true,
@@ -108,7 +110,7 @@ const machineryData = [
     specs: ["55 HP 4WD", "Power Steering", "2000kg Lift Capacity", "Reverse PTO"]
   },
   {
-    id: "m-3",
+    id: "mach-003",
     name: "Kubota MU4501 E-CDIS",
     brand: "Kubota",
     type: "Utility Tractor",
@@ -131,7 +133,7 @@ const machineryData = [
     specs: ["45 HP Japanese Engine", "4WD", "Ultra Smooth Clutch", "Paddy Field Special"]
   },
   {
-    id: "m-4",
+    id: "mach-004",
     name: "Shaktiman Semi-Champion Rotavator",
     brand: "Shaktiman",
     type: "Tillage Equipment",
@@ -154,7 +156,7 @@ const machineryData = [
     specs: ["7 Feet Width", "48 Boron Blades", "8-inch Working Depth", "Gear Drive"]
   },
   {
-    id: "m-5",
+    id: "mach-005",
     name: "Preet 987 Combine Harvester",
     brand: "Preet Agro",
     type: "Combine Harvester",
@@ -177,7 +179,7 @@ const machineryData = [
     specs: ["101 HP Engine", "14ft Cutter Bar", "2400L Grain Tank", "Paddy & Wheat"]
   },
   {
-    id: "m-6",
+    id: "mach-006",
     name: "Aspee Tractor Boom Sprayer 500L",
     brand: "Aspee",
     type: "Crop Sprayer",
@@ -259,6 +261,32 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState(machineryData[0]);
   const [language, setLanguage] = useState("en"); // 'en' | 'ta' | 'hi'
+  const [bookingDraft, setBookingDraft] = useState(null);
+  const [session, setSession] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("farmiqSession")) || null; } catch { return null; }
+  });
+
+  const saveSession = (nextSession) => {
+    setSession(nextSession);
+    localStorage.setItem("farmiqSession", JSON.stringify(nextSession));
+    const roleMap = { FARMER: "Farmer", OWNER: "Machinery Owner", DRIVER: "Delivery Partner", ADMIN: "Administrator" };
+    if (nextSession?.user?.role) setRole(roleMap[nextSession.user.role] || "Farmer");
+  };
+
+  useEffect(() => {
+    const roleMap = { FARMER: "Farmer", OWNER: "Machinery Owner", DRIVER: "Delivery Partner", ADMIN: "Administrator" };
+    if (session?.user?.role) setRole(roleMap[session.user.role] || "Farmer");
+  }, [session]);
+
+  const profileName = session?.user?.fullName || "Ravi Kumar";
+  const profileInitials = profileName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+  const profileAccountId = session?.user?.accountId || "FARM-001";
 
   const activeNav = useMemo(
     () => navigationItems.find((item) => item.id === screen) || { label: "My Profile" },
@@ -395,10 +423,10 @@ export default function App() {
 
             {/* USER PROFILE PILL */}
             <button className="profile-pill" onClick={() => navigateTo("account")}>
-              <div className="profile-avatar">RK</div>
+              <div className="profile-avatar">{profileInitials}</div>
               <div className="profile-text">
-                <span className="profile-name">Ravi Kumar</span>
-                <span className="profile-role">Farmer · Thanjavur (FQ1024)</span>
+                <span className="profile-name">{profileName}</span>
+                <span className="profile-role">{role} · {profileAccountId}</span>
               </div>
             </button>
           </div>
@@ -416,10 +444,11 @@ export default function App() {
             <BookingScreen
               selectedMachine={selectedMachine}
               navigateTo={navigateTo}
+              setBookingDraft={setBookingDraft}
             />
           )}
           {screen === "payments" && (
-            <PaymentsScreen navigateTo={navigateTo} />
+            <PaymentsScreen navigateTo={navigateTo} selectedMachine={selectedMachine} bookingDraft={bookingDraft} session={session} />
           )}
           {screen === "tracking" && (
             <TrackingScreen navigateTo={navigateTo} />
@@ -428,7 +457,7 @@ export default function App() {
             <SupportScreen language={language} />
           )}
           {screen === "account" && (
-            <AccountScreen navigateTo={navigateTo} />
+            <AccountScreen navigateTo={navigateTo} onLogin={saveSession} />
           )}
         </div>
       </main>
@@ -797,7 +826,7 @@ function MachinesScreen({ navigateTo }) {
     { id: "sprayers", label: "Crop Sprayers" }
   ];
 
-  const [apiMachineryData, setApiMachineryData] = useState([]);
+  const [apiMachineryData, setApiMachineryData] = useState(machineryData);
   const [lat, setLat] = useState("10.7905");
   const [lng, setLng] = useState("79.1378");
   const [isLoading, setIsLoading] = useState(false);
@@ -806,7 +835,8 @@ function MachinesScreen({ navigateTo }) {
   const fetchNearbyMachinery = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`http://localhost:3000/api/machinery/nearby?lat=${lat}&lng=${lng}`);
+      const res = await fetch(`${API_URL}/api/machinery/nearby?lat=${lat}&lng=${lng}`);
+      if (!res.ok) throw new Error("Could not load machinery");
       const data = await res.json();
       setApiMachineryData(data);
     } catch (err) {
@@ -826,16 +856,16 @@ function MachinesScreen({ navigateTo }) {
       name: m.name,
       brand: m.name.split(" ")[0], // Simple mock
       type: m.category,
-      category: m.category.toLowerCase() + "s", 
+      category: ({ TRACTOR: "tractors", HARVESTER: "harvesters", TILLAGE: "tillage", SPRAYER: "sprayers" })[m.category] || m.category,
       pricePerHour: m.pricePerHour,
-      horsepower: m.horsepower,
+      hp: m.horsepower ?? m.hp,
       distanceKm: m.distance || 0,
       distance: m.distance ? `${m.distance} km` : "Nearby",
-      owner: m.owner?.fullName || "Verified Owner",
+      owner: m.owner?.fullName || m.owner || "Verified Owner",
       ownerRating: 4.8,
-      image: "https://images.unsplash.com/photo-1592982537447-6f233c70f089?auto=format&fit=crop&q=80&w=800",
+      image: m.imageUrl || m.image,
       implements: ["Rotavator", "Cultivator"],
-      fuelType: "Diesel",
+      fuelType: m.fuelType || "Diesel",
       badges: m.distance <= 2 ? ["Fast Dispatch", "Top Rated"] : ["Verified"]
     }));
 
@@ -1109,9 +1139,9 @@ function MachineCardPro({ machine, onBook, detailed = false }) {
 // 3. BOOKING ENGINE WITH LIVE QUOTE
 // ============================================================================
 
-function BookingScreen({ selectedMachine, navigateTo }) {
+function BookingScreen({ selectedMachine, navigateTo, setBookingDraft }) {
   const machine = selectedMachine || machineryData[0];
-  const [rentalDate, setRentalDate] = useState("2026-08-25");
+  const [rentalDate, setRentalDate] = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10));
   const [startTime, setStartTime] = useState("08:00");
   const [durationHours, setDurationHours] = useState(6);
   const [includeOperator, setIncludeOperator] = useState(true);
@@ -1346,7 +1376,10 @@ function BookingScreen({ selectedMachine, navigateTo }) {
             <span>FarmIQ 100% Escrow Guarantee: Full refund if machinery is delayed or fails inspection.</span>
           </div>
 
-          <button className="btn-primary btn-full btn-lg" onClick={() => setIsSubmitted(true)}>
+          <button className="btn-primary btn-full btn-lg" onClick={() => {
+            setBookingDraft({ rentalDate, startTime, durationHours, includeOperator, deliveryAddress, farmLat: 10.7905, farmLng: 79.1378 });
+            setIsSubmitted(true);
+          }}>
             <span>Confirm & Request Booking</span>
             <ArrowRight size={16} />
           </button>
@@ -1360,10 +1393,11 @@ function BookingScreen({ selectedMachine, navigateTo }) {
 // 4. PAYMENTS & ESCROW SCREEN
 // ============================================================================
 
-function PaymentsScreen({ navigateTo }) {
+function PaymentsScreen({ navigateTo, selectedMachine, bookingDraft, session }) {
   const [selectedMethod, setSelectedMethod] = useState("upi");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
 
   const paymentMethods = [
     {
@@ -1389,30 +1423,36 @@ function PaymentsScreen({ navigateTo }) {
 
   const handlePay = async () => {
     setIsProcessing(true);
-    
-    // Simulate payment delay
-    await new Promise(resolve => setTimeout(resolve, 1200));
+    setPaymentError("");
 
     try {
       // Create actual booking on the backend
-      const res = await fetch('http://localhost:3000/api/bookings', {
+      const draft = bookingDraft || { rentalDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10), startTime: "08:00", durationHours: 6, includeOperator: true, deliveryAddress: "Vallam Road, Thanjavur", farmLat: 10.7905, farmLng: 79.1378 };
+      const res = await fetch(`${API_URL}/api/bookings`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {})
+        },
         body: JSON.stringify({
-          farmLat: 10.7905, 
-          farmLng: 79.1378, 
-          machineryId: "123", // Ideally passed from props, using mock
-          durationHours: 6,
-          totalAmount: 4340,
-          advancePaid: 2170
+          farmerAccountId: session?.user?.role === "FARMER" ? session.user.accountId : "FARM-001",
+          farmLat: draft.farmLat,
+          farmLng: draft.farmLng,
+          farmAddress: draft.deliveryAddress,
+          machineryId: selectedMachine?.id || "mach-001",
+          scheduledAt: `${draft.rentalDate}T${draft.startTime}:00+05:30`,
+          durationHours: draft.durationHours,
+          includeOperator: draft.includeOperator,
+          paymentMethod: selectedMethod
         })
       });
-      await res.json();
-      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Booking could not be created");
       setIsProcessing(false);
       setIsSuccess(true);
     } catch (err) {
       console.error("Payment API Error", err);
+      setPaymentError(err.message);
       setIsProcessing(false);
     }
   };
@@ -1512,6 +1552,7 @@ function PaymentsScreen({ navigateTo }) {
               </>
             )}
           </button>
+          {paymentError && <p style={{ color: "#b42318", fontSize: "12px", marginTop: "10px" }}>{paymentError}</p>}
         </section>
 
         {/* TRUST & PROTECTION SIDEBAR */}
@@ -1562,7 +1603,8 @@ function TrackingScreen() {
     // Automatically fetch the latest assigned ride and driver
     const fetchRide = async () => {
       try {
-        const res = await fetch('http://localhost:3000/api/rides');
+        const res = await fetch(`${API_URL}/api/rides`);
+        if (!res.ok) throw new Error("Could not load active rides");
         const rides = await res.json();
         const activeRide = rides.find(r => r.status === 'ASSIGNED') || rides[0];
         setRide(activeRide);
@@ -1837,10 +1879,38 @@ function SupportScreen({ language }) {
 // 7. ACCOUNT & AUTHENTICATION PORTAL
 // ============================================================================
 
-function AccountScreen({ navigateTo }) {
+function AccountScreen({ navigateTo, onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
-  const [mobileNum, setMobileNum] = useState("98765 43210");
+  const [accountId, setAccountId] = useState("FARM-001");
+  const [password, setPassword] = useState("FarmIQ@F01");
   const [fullName, setFullName] = useState("Ravi Kumar");
+  const [authError, setAuthError] = useState("");
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
+  const submitAccount = async (event) => {
+    event.preventDefault();
+    setAuthError("");
+    if (isRegister) {
+      setAuthError("Registration will be added after the demo-account review. Use one of the seeded account IDs for now.");
+      return;
+    }
+    setIsSigningIn(true);
+    try {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId, password }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Sign in failed");
+      onLogin(data);
+      navigateTo("dashboard");
+    } catch (error) {
+      setAuthError(error.message);
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
 
   return (
     <div className="screen">
@@ -1877,10 +1947,7 @@ function AccountScreen({ navigateTo }) {
         {/* AUTH FORM */}
         <form
           className="auth-form-panel"
-          onSubmit={(e) => {
-            e.preventDefault();
-            navigateTo("dashboard");
-          }}
+          onSubmit={submitAccount}
         >
           <div className="auth-tabs">
             <button
@@ -1903,7 +1970,7 @@ function AccountScreen({ navigateTo }) {
             {isRegister ? "Create Your FarmIQ Profile" : "Sign In to FarmIQ"}
           </h2>
           <p style={{ color: "var(--slate-500)", fontSize: "13px", marginBottom: "20px" }}>
-            {isRegister ? "Select your workspace role to begin" : "Enter your mobile number to receive OTP"}
+            {isRegister ? "Select your workspace role to begin" : "Use your FarmIQ account ID and password"}
           </p>
 
           {isRegister && (
@@ -1918,13 +1985,13 @@ function AccountScreen({ navigateTo }) {
           )}
 
           <div className="form-group">
-            <label>Mobile Number</label>
+            <label>{isRegister ? "Mobile Number" : "Account ID"}</label>
             <input
               type="text"
               className="form-control"
-              placeholder="e.g. 98765 43210"
-              value={mobileNum}
-              onChange={(e) => setMobileNum(e.target.value)}
+              placeholder={isRegister ? "e.g. 98765 43210" : "e.g. FARM-001"}
+              value={isRegister ? accountId : accountId}
+              onChange={(e) => setAccountId(e.target.value)}
             />
           </div>
 
@@ -1934,15 +2001,17 @@ function AccountScreen({ navigateTo }) {
               type={isRegister ? "text" : "password"}
               className="form-control"
               placeholder={isRegister ? "Ravi Kumar" : "••••••"}
-              value={isRegister ? fullName : "123456"}
-              onChange={(e) => isRegister && setFullName(e.target.value)}
+              value={isRegister ? fullName : password}
+              onChange={(e) => isRegister ? setFullName(e.target.value) : setPassword(e.target.value)}
             />
           </div>
 
-          <button className="btn-primary btn-full btn-lg" style={{ marginTop: "12px" }}>
-            <span>Continue to Workspace</span>
+          <button className="btn-primary btn-full btn-lg" style={{ marginTop: "12px" }} disabled={isSigningIn}>
+            <span>{isSigningIn ? "Signing in..." : "Continue to Workspace"}</span>
             <ArrowRight size={16} />
           </button>
+
+          {authError && <p style={{ color: "#b42318", fontSize: "12px", marginTop: "12px" }}>{authError}</p>}
 
           <p style={{ textAlign: "center", fontSize: "11px", color: "var(--slate-400)", marginTop: "16px" }}>
             By continuing, you agree to FarmIQ Terms of Service & Safety Escrow Rules.

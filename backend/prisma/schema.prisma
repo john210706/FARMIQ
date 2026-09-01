@@ -3,74 +3,136 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  FARMER
+  OWNER
+  DRIVER
+  ADMIN
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum MachineryStatus {
+  AVAILABLE
+  BOOKED
+  MAINTENANCE
+  INACTIVE
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  ASSIGNED
+  IN_TRANSIT
+  DELIVERED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
 }
 
 model User {
-  id        String   @id @default(uuid())
-  phone     String   @unique
-  fullName  String
-  role      String   @default("FARMER") // FARMER, OWNER, DRIVER, ADMIN
-  
-  // Geo-location for Farmer's farm or Driver's current location
-  latitude  Float?
-  longitude Float?
-  
-  // Relationships
-  machinery       Machinery[] // Equipment owned by this user
-  bookingsAsFarmer Booking[]   @relation("FarmerBookings")
-  bookingsAsDriver Booking[]   @relation("DriverBookings")
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String             @id @default(uuid()) @db.Uuid
+  accountId          String             @unique @map("account_id")
+  phone              String             @unique
+  fullName           String             @map("full_name")
+  passwordHash       String             @map("password_hash")
+  role               Role
+  language           String             @default("en")
+  verificationStatus VerificationStatus @default(PENDING) @map("verification_status")
+  latitude           Float?
+  longitude          Float?
+  active             Boolean            @default(true)
+  machinery          Machinery[]
+  farmerBookings     Booking[]          @relation("FarmerBookings")
+  driverBookings     Booking[]          @relation("DriverBookings")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  @@index([role, active])
+  @@map("users")
 }
 
 model Machinery {
-  id           String   @id @default(uuid())
-  name         String
-  category     String   // TRACTOR, HARVESTER, TILLAGE
-  pricePerHour Float
-  horsepower   Int
-  isAvailable  Boolean  @default(true)
-  
-  // Geo-location for the machinery's current depot/parking spot
-  latitude     Float?
-  longitude    Float?
-  
-  ownerId      String
-  owner        User     @relation(fields: [ownerId], references: [id])
-  
-  bookings     Booking[]
+  id                String          @id
+  name              String
+  brand             String
+  category          String
+  description       String?
+  pricePerHour      Decimal         @db.Decimal(10, 2) @map("price_per_hour")
+  pricePerDay       Decimal?        @db.Decimal(10, 2) @map("price_per_day")
+  horsepower        Int?
+  fuelType          String?         @map("fuel_type")
+  imageUrl          String          @map("image_url")
+  operatorAvailable Boolean         @default(false) @map("operator_available")
+  status            MachineryStatus @default(AVAILABLE)
+  latitude          Float?
+  longitude         Float?
+  location          String?
+  ownerId           String          @db.Uuid @map("owner_id")
+  owner             User            @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  bookings          Booking[]
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  @@index([status, category])
+  @@index([ownerId])
+  @@map("machinery")
 }
 
 model Booking {
-  id            String   @id @default(uuid())
-  status        String   @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
-  
-  durationHours Int
-  totalAmount   Float
-  advancePaid   Float    @default(0)
-  
-  // Ride/Booking Geo-Location
-  farmLat       Float?
-  farmLng       Float?
-  
-  farmerId      String
-  farmer        User     @relation("FarmerBookings", fields: [farmerId], references: [id])
-  
-  machineryId   String
-  machinery     Machinery @relation(fields: [machineryId], references: [id])
+  id            String        @id @default(uuid()) @db.Uuid
+  status        BookingStatus @default(PENDING_PAYMENT)
+  scheduledAt   DateTime      @map("scheduled_at")
+  durationHours Int           @map("duration_hours")
+  totalAmount   Decimal       @db.Decimal(10, 2) @map("total_amount")
+  advanceAmount Decimal       @db.Decimal(10, 2) @map("advance_amount")
+  deliveryFee   Decimal       @default(600) @db.Decimal(10, 2) @map("delivery_fee")
+  operatorFee   Decimal       @default(0) @db.Decimal(10, 2) @map("operator_fee")
+  farmAddress   String?       @map("farm_address")
+  farmLat       Float         @map("farm_lat")
+  farmLng       Float         @map("farm_lng")
+  farmerId      String        @db.Uuid @map("farmer_id")
+  farmer        User          @relation("FarmerBookings", fields: [farmerId], references: [id], onDelete: Restrict)
+  machineryId   String        @map("machinery_id")
+  machinery     Machinery     @relation(fields: [machineryId], references: [id], onDelete: Restrict)
+  driverId      String?       @db.Uuid @map("driver_id")
+  driver        User?         @relation("DriverBookings", fields: [driverId], references: [id], onDelete: SetNull)
+  payment       Payment?
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
 
-  // Assignment
-  driverId      String?
-  driver        User?    @relation("DriverBookings", fields: [driverId], references: [id])
+  @@index([farmerId, status])
+  @@index([driverId, status])
+  @@index([machineryId, scheduledAt])
+  @@map("bookings")
+}
 
-  bookingDate   DateTime
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+model Payment {
+  id                String        @id @default(uuid()) @db.Uuid
+  bookingId         String        @unique @db.Uuid @map("booking_id")
+  booking           Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amount            Decimal       @db.Decimal(10, 2)
+  status            PaymentStatus @default(PENDING)
+  method            String
+  providerReference String?       @map("provider_reference")
+  paidAt            DateTime?     @map("paid_at")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  @@map("payments")
 }

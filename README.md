@@ -1,47 +1,55 @@
 # FarmIQ
 
-Day 1 and Day 2 deliverables for the FarmIQ college project.
+FarmIQ is a machinery-rental, logistics, and training platform for small-scale farmers. The project uses a React/Vite frontend and an Express API backed by Supabase PostgreSQL through Prisma.
 
-## Current scope
+## Technology
 
-- Project requirements and MVP planning.
-- User roles and application workflow.
-- Responsive React UI/UX prototype.
-- Dashboard, machinery search, booking, payment, tracking, support, login, and registration screens.
-- Sample data only. Nothing is saved permanently.
+| Layer | Technology |
+| --- | --- |
+| Frontend | React + Vite, React Leaflet |
+| Backend | Node.js + Express |
+| Database | Supabase PostgreSQL + Prisma |
+| Demo authentication | Account ID/password, bcrypt hashes, JWT sessions |
 
-## Planned technology stack
+## Supabase setup
 
-| Layer | Technology | Status |
-| --- | --- | --- |
-| Frontend | React + Vite | Implemented for Day 2 |
-| Backend | Node.js + Express | Later phase |
-| Database | PostgreSQL through Supabase | Later phase |
-| Authentication | Supabase Auth or Express-based OTP | Later decision |
+1. Create or open a Supabase project.
+2. In the Supabase dashboard, open **Project Settings -> Database -> Connection string**.
+3. Copy [backend/.env.example](C:/Users/victo/OneDrive/Desktop/John_Projects/FarmIQ/backend/.env.example) to `backend/.env`.
+4. Put the transaction-pooler URL in `DATABASE_URL` and the direct/session URL in `DIRECT_URL`.
+5. Replace `JWT_SECRET` with a long random string.
+6. From the `backend` directory, run:
 
-Express, PostgreSQL, Supabase, authentication, payment processing, and APIs are intentionally not installed or implemented yet.
+```bash
+npm install
+npm run db:generate
+npm run db:push
+npm run db:seed
+npm run dev
+```
 
-## Run in VS Code
+The API runs at `http://localhost:3000`.
+
+## Frontend setup
+
+From the project root:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local address displayed by Vite, normally `http://localhost:5173`.
+The frontend normally runs at `http://localhost:5173`. It uses `VITE_API_URL` from the root `.env` when provided and otherwise connects to `http://localhost:3000`.
 
-## Project files
+## Demo data
 
-```text
-FarmIQ/
-├── docs/
-│   ├── project-requirements.md
-│   └── ui-ux-specification.md
-├── src/
-│   ├── App.jsx
-│   ├── main.jsx
-│   └── styles.css
-├── index.html
-├── package.json
-└── README.md
-```
+The seed creates:
+
+- 6 farmer accounts
+- 6 driver accounts
+- 6 machinery-owner/buyer accounts
+- 6 machinery listings with displayable image URLs
+
+See [backend/DEMO_ACCOUNTS.md](C:/Users/victo/OneDrive/Desktop/John_Projects/FarmIQ/backend/DEMO_ACCOUNTS.md) for the development login IDs and passwords.
+
+The payment route is a project demonstration: it records a simulated paid advance in PostgreSQL but does not charge real money.
