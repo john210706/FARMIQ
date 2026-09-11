@@ -1009,8 +1009,8 @@ function MachinesScreen({ navigateTo, t }) {
       <div style={{ height: "300px", borderRadius: "12px", overflow: "hidden", border: "1px solid var(--slate-200)", marginBottom: "20px" }}>
         <MapContainer center={[parseFloat(lat) || 10.7905, parseFloat(lng) || 79.1378]} zoom={12} style={{ height: "100%", width: "100%", zIndex: 1 }}>
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
           {/* Farm Pin */}
           <Marker position={[parseFloat(lat) || 10.7905, parseFloat(lng) || 79.1378]}>
@@ -1670,8 +1670,8 @@ function TrackingScreen({ t }) {
         <section style={{ height: "480px", borderRadius: "16px", overflow: "hidden", border: "1px solid var(--slate-200)" }}>
           <MapContainer bounds={bounds} zoom={13} style={{ height: "100%", width: "100%", zIndex: 1 }}>
             <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-              attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
             {/* Driver Marker */}
             <Marker position={driverPos}>
