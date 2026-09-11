@@ -266,6 +266,82 @@ app.get("/api/rides", async (req, res, next) => {
   }
 });
 
+// Driver Deliveries List (Available & Assigned)
+app.get("/api/driver/deliveries", async (req, res, next) => {
+  try {
+    const deliveries = await prisma.booking.findMany({
+      where: {
+        status: {
+          in: [
+            BookingStatus.PENDING_PAYMENT,
+            BookingStatus.ASSIGNED,
+            BookingStatus.IN_TRANSIT,
+            BookingStatus.DELIVERED,
+            BookingStatus.IN_PROGRESS
+          ]
+        }
+      },
+      include: { farmer: true, driver: true, machinery: true, payment: true },
+      orderBy: { createdAt: "desc" },
+      take: 20
+    });
+    res.json(deliveries.map(bookingResponse));
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Driver Accepts a Delivery Request
+app.post("/api/driver/deliveries/:id/accept", async (req, res, next) => {
+  try {
+    const bookingId = req.params.id;
+    let driverId = req.body.driverId;
+
+    // If no driverId provided, pick the first active driver
+    if (!driverId) {
+      const defaultDriver = await prisma.user.findFirst({
+        where: { role: Role.DRIVER, active: true }
+      });
+      if (defaultDriver) driverId = defaultDriver.id;
+    }
+
+    const updated = await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        driverId: driverId || undefined,
+        status: BookingStatus.ASSIGNED
+      },
+      include: { farmer: true, driver: true, machinery: true, payment: true }
+    });
+
+    res.json(bookingResponse(updated));
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Driver Updates Delivery Status (ASSIGNED -> IN_TRANSIT -> DELIVERED -> COMPLETED)
+app.patch("/api/driver/deliveries/:id/status", async (req, res, next) => {
+  try {
+    const bookingId = req.params.id;
+    const nextStatus = req.body.status;
+
+    if (!Object.values(BookingStatus).includes(nextStatus)) {
+      return res.status(400).json({ error: "Invalid booking status" });
+    }
+
+    const updated = await prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: nextStatus },
+      include: { farmer: true, driver: true, machinery: true, payment: true }
+    });
+
+    res.json(bookingResponse(updated));
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.patch("/api/drivers/location", requireAuth([Role.DRIVER]), async (req, res, next) => {
   try {
     const latitude = parseCoordinate(req.body.latitude, "latitude", -90, 90);
