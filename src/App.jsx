@@ -55,6 +55,7 @@ import {
   ShieldAlert,
   Fuel
 } from "lucide-react";
+import { getTranslation } from "./translations";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -151,22 +152,22 @@ const machineryData = [
     verified: true,
     fuelType: "Implement",
     operatorAvailable: false,
-    availabilityStatus: "Available Tomorrow",
-    tag: "Best for Soil Prep",
-    specs: ["7 Feet Width", "48 Boron Blades", "8-inch Working Depth", "Gear Drive"]
+    availabilityStatus: "Available Today",
+    tag: "Fast Tillage",
+    specs: ["7-Foot Working Width", "Multi-Speed Gearbox", "Boron Steel Blades", "Paddy & Dry Land"]
   },
   {
     id: "mach-005",
     name: "Preet 987 Combine Harvester",
-    brand: "Preet Agro",
+    brand: "Preet",
     type: "Combine Harvester",
     category: "harvesters",
     hp: 101,
-    owner: "Thanjavur Delta Harvesters",
+    owner: "Delta Harvester Fleet",
     ownerRating: 4.9,
-    reviewsCount: 145,
-    distance: "8.5 km away",
-    distanceKm: 8.5,
+    reviewsCount: 110,
+    distance: "8.4 km away",
+    distanceKm: 8.4,
     pricePerHour: 2800,
     pricePerDay: 19500,
     location: "Budalur Road",
@@ -175,8 +176,8 @@ const machineryData = [
     fuelType: "Heavy Diesel",
     operatorAvailable: true,
     availabilityStatus: "Available Today",
-    tag: "Harvest Special",
-    specs: ["101 HP Engine", "14ft Cutter Bar", "2400L Grain Tank", "Paddy & Wheat"]
+    tag: "High Output",
+    specs: ["101 HP Turbo", "14-Foot Cutter Bar", "Straw Walker System", "Grain Tank 2.4 m³"]
   },
   {
     id: "mach-006",
@@ -203,54 +204,6 @@ const machineryData = [
   }
 ];
 
-const navigationItems = [
-  { id: "dashboard", label: "Overview", icon: LayoutDashboard },
-  { id: "machines", label: "Find Machinery", icon: Tractor, badge: "6 Active" },
-  { id: "booking", label: "Bookings", icon: CalendarDays, badge: "1 Active" },
-  { id: "payments", label: "Payments & Escrow", icon: CreditCard },
-  { id: "tracking", label: "Live Telematics", icon: Truck, badge: "Live" },
-  { id: "support", label: "Help & Kisan AI", icon: HelpCircle },
-];
-
-const roleWorkspaces = {
-  Farmer: {
-    greeting: "Good morning, Ravi Kumar",
-    subtitle: "Ideal sowing conditions today in Thanjavur. Check verified equipment available for immediate dispatch.",
-    metrics: [
-      { label: "Active Bookings", value: "02", sub: "1 In-Transit arriving 10:40 AM", icon: CalendarDays, type: "emerald", trend: "+1 this week" },
-      { label: "Hours Saved", value: "18.5 hrs", sub: "Compared to manual harvesting", icon: Clock, type: "amber", trend: "High efficiency" },
-      { label: "Nearby Equipment", value: "24 Units", sub: "Within 10 km radius", icon: MapPin, type: "blue", trend: "100% verified" }
-    ]
-  },
-  "Machinery Owner": {
-    greeting: "Welcome back, Murugan",
-    subtitle: "2 new rental requests require your confirmation for Mahindra 575 DI.",
-    metrics: [
-      { label: "Listed Equipment", value: "06 Units", sub: "4 currently on field", icon: Tractor, type: "emerald", trend: "66% active" },
-      { label: "This Month Revenue", value: "₹34,800", sub: "Next payout in 2 days", icon: IndianRupee, type: "amber", trend: "+18.4% vs last mo" },
-      { label: "Fleet Utilisation", value: "78.2%", sub: "Above district average", icon: Gauge, type: "blue", trend: "+5.1% efficiency" }
-    ]
-  },
-  "Delivery Partner": {
-    greeting: "Route Ready, Suresh Kumar",
-    subtitle: "3 equipment movements scheduled today. Mahindra 575 DI is in transit to Ravi's farm.",
-    metrics: [
-      { label: "Assigned Trips", value: "03 Trips", sub: "1 in transit, 2 scheduled", icon: Truck, type: "emerald", trend: "On schedule" },
-      { label: "Completed Deliveries", value: "268", sub: "4.9 ★ verified rating", icon: CheckCircle2, type: "amber", trend: "Top partner" },
-      { label: "Distance Remaining", value: "42 km", sub: "Estimated fuel 4.8 L", icon: Navigation, type: "blue", trend: "Optimized route" }
-    ]
-  },
-  Administrator: {
-    greeting: "FarmIQ Operations Control",
-    subtitle: "4 equipment owner verifications and 2 safety inspection audits awaiting review.",
-    metrics: [
-      { label: "Active Farmers", value: "1,248", sub: "84 new this week", icon: Users, type: "emerald", trend: "+12.3% MoM" },
-      { label: "Live Rentals", value: "86 Live", sub: "Across 4 Delta districts", icon: Tractor, type: "amber", trend: "Zero disputes" },
-      { label: "Safety Compliance", value: "99.4%", sub: "All machinery inspected", icon: ShieldCheck, type: "blue", trend: "Certified" }
-    ]
-  }
-};
-
 // ============================================================================
 // MAIN APP COMPONENT
 // ============================================================================
@@ -265,6 +218,8 @@ export default function App() {
   const [session, setSession] = useState(() => {
     try { return JSON.parse(localStorage.getItem("farmiqSession")) || null; } catch { return null; }
   });
+
+  const t = useMemo(() => getTranslation(language), [language]);
 
   const saveSession = (nextSession) => {
     setSession(nextSession);
@@ -288,9 +243,18 @@ export default function App() {
     .toUpperCase();
   const profileAccountId = session?.user?.accountId || "FARM-001";
 
+  const navigationItems = useMemo(() => [
+    { id: "dashboard", label: t.nav_dashboard, icon: LayoutDashboard },
+    { id: "machines", label: t.nav_machines, icon: Tractor, badge: `6 ${t.badge_active}` },
+    { id: "booking", label: t.nav_booking, icon: CalendarDays, badge: `1 ${t.badge_active}` },
+    { id: "payments", label: t.nav_payments, icon: CreditCard },
+    { id: "tracking", label: t.nav_tracking, icon: Truck, badge: t.badge_live },
+    { id: "support", label: t.nav_support, icon: HelpCircle },
+  ], [t]);
+
   const activeNav = useMemo(
-    () => navigationItems.find((item) => item.id === screen) || { label: "My Profile" },
-    [screen]
+    () => navigationItems.find((item) => item.id === screen) || { label: t.myProfile },
+    [screen, navigationItems, t]
   );
 
   const navigateTo = (screenId, machine = null) => {
@@ -298,6 +262,13 @@ export default function App() {
     setScreen(screenId);
     setMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const roleLabels = {
+    Farmer: t.role_Farmer,
+    "Machinery Owner": t.role_MachineryOwner,
+    "Delivery Partner": t.role_DeliveryPartner,
+    Administrator: t.role_Administrator
   };
 
   return (
@@ -309,8 +280,8 @@ export default function App() {
             <Tractor size={24} strokeWidth={2.2} />
           </div>
           <div>
-            <strong>FarmIQ</strong>
-            <small>Smart Farm Machinery & Telematics</small>
+            <strong>{t.brandTitle}</strong>
+            <small>{t.brandSubtitle}</small>
           </div>
           <button
             className="mobile-close-btn"
@@ -321,7 +292,7 @@ export default function App() {
           </button>
         </div>
 
-        <p className="nav-label">Agri-Workspace</p>
+        <p className="nav-label">{t.agriWorkspace}</p>
         <nav>
           {navigationItems.map((item) => {
             const IconComponent = item.icon;
@@ -346,7 +317,7 @@ export default function App() {
         <div className="role-switch-container">
           <div className="role-switch-header">
             <Users size={14} />
-            <span>Switch Workspace View</span>
+            <span>{t.switchWorkspace}</span>
           </div>
           <select
             className="role-select"
@@ -356,11 +327,10 @@ export default function App() {
               navigateTo("dashboard");
             }}
           >
-            {Object.keys(roleWorkspaces).map((roleName) => (
-              <option key={roleName} value={roleName}>
-                {roleName} Workspace
-              </option>
-            ))}
+            <option value="Farmer">{t.role_Farmer_workspace}</option>
+            <option value="Machinery Owner">{t.role_MachineryOwner_workspace}</option>
+            <option value="Delivery Partner">{t.role_DeliveryPartner_workspace}</option>
+            <option value="Administrator">{t.role_Administrator_workspace}</option>
           </select>
         </div>
 
@@ -368,12 +338,12 @@ export default function App() {
         <div className="support-banner">
           <div className="support-banner-header">
             <PhoneCall size={14} />
-            <span>Kisan Helpline 24/7</span>
+            <span>{t.kisanHelpline}</span>
           </div>
-          <p>Assisted booking in Tamil, Hindi & English</p>
+          <p>{t.assistedBooking}</p>
           <a href="tel:18001234567">
             <Phone size={13} />
-            1800 123 4567 (Toll Free)
+            {t.tollFree}
           </a>
         </div>
       </aside>
@@ -399,7 +369,7 @@ export default function App() {
               <Menu size={20} />
             </button>
             <div>
-              <span className="topbar-subtitle">FARMIQ ENTERPRISE PLATFORM</span>
+              <span className="topbar-subtitle">{t.enterprisePlatform}</span>
               <h1 className="topbar-title">{activeNav.label}</h1>
             </div>
           </div>
@@ -409,14 +379,14 @@ export default function App() {
             <button
               className="header-pill-btn"
               onClick={() => setLanguage((l) => (l === "en" ? "ta" : l === "ta" ? "hi" : "en"))}
-              title="Change Language"
+              title={t.changeLanguage}
             >
               <Globe size={15} />
-              <span>{language === "en" ? "English" : language === "ta" ? "தமிழ் (Tamil)" : "हिंदी (Hindi)"}</span>
+              <span>{t.languageName}</span>
             </button>
 
             {/* NOTIFICATION ICON */}
-            <button className="icon-badge-btn" aria-label="View notifications">
+            <button className="icon-badge-btn" aria-label={t.notifications}>
               <Bell size={17} />
               <span className="icon-badge-dot" />
             </button>
@@ -426,7 +396,7 @@ export default function App() {
               <div className="profile-avatar">{profileInitials}</div>
               <div className="profile-text">
                 <span className="profile-name">{profileName}</span>
-                <span className="profile-role">{role} · {profileAccountId}</span>
+                <span className="profile-role">{roleLabels[role] || role} · {profileAccountId}</span>
               </div>
             </button>
           </div>
@@ -435,29 +405,36 @@ export default function App() {
         {/* ACTIVE SCREEN CONTENT */}
         <div className="content-container">
           {screen === "dashboard" && (
-            <DashboardScreen role={role} navigateTo={navigateTo} />
+            <DashboardScreen role={role} navigateTo={navigateTo} t={t} />
           )}
           {screen === "machines" && (
-            <MachinesScreen navigateTo={navigateTo} />
+            <MachinesScreen navigateTo={navigateTo} t={t} />
           )}
           {screen === "booking" && (
             <BookingScreen
               selectedMachine={selectedMachine}
               navigateTo={navigateTo}
               setBookingDraft={setBookingDraft}
+              t={t}
             />
           )}
           {screen === "payments" && (
-            <PaymentsScreen navigateTo={navigateTo} selectedMachine={selectedMachine} bookingDraft={bookingDraft} session={session} />
+            <PaymentsScreen
+              navigateTo={navigateTo}
+              selectedMachine={selectedMachine}
+              bookingDraft={bookingDraft}
+              session={session}
+              t={t}
+            />
           )}
           {screen === "tracking" && (
-            <TrackingScreen navigateTo={navigateTo} />
+            <TrackingScreen navigateTo={navigateTo} t={t} />
           )}
           {screen === "support" && (
-            <SupportScreen language={language} />
+            <SupportScreen language={language} t={t} />
           )}
           {screen === "account" && (
-            <AccountScreen navigateTo={navigateTo} onLogin={saveSession} />
+            <AccountScreen navigateTo={navigateTo} onLogin={saveSession} t={t} />
           )}
         </div>
       </main>
@@ -469,8 +446,59 @@ export default function App() {
 // 1. DASHBOARD SCREEN
 // ============================================================================
 
-function DashboardScreen({ role, navigateTo }) {
-  const currentRoleConfig = roleWorkspaces[role] || roleWorkspaces.Farmer;
+function DashboardScreen({ role, navigateTo, t }) {
+  const roleConfig = useMemo(() => {
+    switch (role) {
+      case "Machinery Owner":
+        return {
+          greeting: t.ownerGreeting,
+          subtitle: t.ownerSubtitle,
+          metrics: [
+            { label: t.metric_listedEquipment, value: "06 Units", sub: t.metric_listedEquipmentSub, icon: Tractor, type: "emerald", trend: t.metric_listedEquipmentTrend },
+            { label: t.metric_monthRevenue, value: "₹34,800", sub: t.metric_monthRevenueSub, icon: IndianRupee, type: "amber", trend: t.metric_monthRevenueTrend },
+            { label: t.metric_fleetUtilisation, value: "78.2%", sub: t.metric_fleetUtilisationSub, icon: Gauge, type: "blue", trend: t.metric_fleetUtilisationTrend }
+          ]
+        };
+      case "Delivery Partner":
+        return {
+          greeting: t.driverGreeting,
+          subtitle: t.driverSubtitle,
+          metrics: [
+            { label: t.metric_assignedTrips, value: "03 Trips", sub: t.metric_assignedTripsSub, icon: Truck, type: "emerald", trend: t.metric_assignedTripsTrend },
+            { label: t.metric_completedDeliveries, value: "268", sub: t.metric_completedDeliveriesSub, icon: CheckCircle2, type: "amber", trend: t.metric_completedDeliveriesTrend },
+            { label: t.metric_distanceRemaining, value: "42 km", sub: t.metric_distanceRemainingSub, icon: Navigation, type: "blue", trend: t.metric_distanceRemainingTrend }
+          ]
+        };
+      case "Administrator":
+        return {
+          greeting: t.adminGreeting,
+          subtitle: t.adminSubtitle,
+          metrics: [
+            { label: t.metric_activeFarmers, value: "1,248", sub: t.metric_activeFarmersSub, icon: Users, type: "emerald", trend: t.metric_activeFarmersTrend },
+            { label: t.metric_liveRentals, value: "86 Live", sub: t.metric_liveRentalsSub, icon: Tractor, type: "amber", trend: t.metric_liveRentalsTrend },
+            { label: t.metric_safetyCompliance, value: "99.4%", sub: t.metric_safetyComplianceSub, icon: ShieldCheck, type: "blue", trend: t.metric_safetyComplianceTrend }
+          ]
+        };
+      case "Farmer":
+      default:
+        return {
+          greeting: t.farmerGreeting,
+          subtitle: t.farmerSubtitle,
+          metrics: [
+            { label: t.metric_activeBookings, value: "02", sub: t.metric_activeBookingsSub, icon: CalendarDays, type: "emerald", trend: t.metric_activeBookingsTrend },
+            { label: t.metric_hoursSaved, value: "18.5 hrs", sub: t.metric_hoursSavedSub, icon: Clock, type: "amber", trend: t.metric_hoursSavedTrend },
+            { label: t.metric_nearbyEquipment, value: "24 Units", sub: t.metric_nearbyEquipmentSub, icon: MapPin, type: "blue", trend: t.metric_nearbyEquipmentTrend }
+          ]
+        };
+    }
+  }, [role, t]);
+
+  const roleNameDisplay = {
+    Farmer: t.role_Farmer,
+    "Machinery Owner": t.role_MachineryOwner,
+    "Delivery Partner": t.role_DeliveryPartner,
+    Administrator: t.role_Administrator
+  }[role] || role;
 
   return (
     <div className="screen">
@@ -479,10 +507,10 @@ function DashboardScreen({ role, navigateTo }) {
         <div>
           <div className="hero-tag">
             <Sparkles size={13} />
-            <span>{role} Portal · Delta Agri-Zone</span>
+            <span>{roleNameDisplay} {t.portalDeltaTag}</span>
           </div>
-          <h2>{currentRoleConfig.greeting}</h2>
-          <p>{currentRoleConfig.subtitle}</p>
+          <h2>{roleConfig.greeting}</h2>
+          <p>{roleConfig.subtitle}</p>
           <div className="hero-actions">
             <button
               className="btn-primary btn-lg"
@@ -491,14 +519,14 @@ function DashboardScreen({ role, navigateTo }) {
               }
             >
               <Search size={16} />
-              {role === "Farmer" ? "Find Verified Machinery" : "Manage Active Operations"}
+              {role === "Farmer" ? t.findVerifiedMachinery : t.manageActiveOperations}
             </button>
             <button
               className="btn-secondary"
               onClick={() => navigateTo("tracking")}
             >
               <Truck size={16} />
-              View Live Telematics
+              {t.viewLiveTelematics}
             </button>
           </div>
         </div>
@@ -510,23 +538,23 @@ function DashboardScreen({ role, navigateTo }) {
               <SunMedium size={28} style={{ color: "var(--amber-500)" }} />
               <div>
                 <span className="weather-temp">31°C</span>
-                <span className="weather-desc"> · Sunny & Clear</span>
+                <span className="weather-desc"> · {t.weatherSunny}</span>
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <span style={{ fontSize: "12px", color: "var(--primary-400)", fontWeight: 600, display: "block" }}>Ideal Field Work</span>
-              <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)" }}>Thanjavur, TN</span>
+              <span style={{ fontSize: "12px", color: "var(--primary-400)", fontWeight: 600, display: "block" }}>{t.idealFieldWork}</span>
+              <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)" }}>{t.weatherLocation}</span>
             </div>
           </div>
 
           <div className="telemetry-row">
             <div className="telemetry-item">
-              <small>Soil Moisture</small>
-              <strong>64% Optimal</strong>
+              <small>{t.soilMoisture}</small>
+              <strong>{t.soilMoistureVal}</strong>
             </div>
             <div className="telemetry-item">
-              <small>Wind Speed</small>
-              <strong>11 km/h ENE</strong>
+              <small>{t.windSpeed}</small>
+              <strong>{t.windSpeedVal}</strong>
             </div>
           </div>
         </div>
@@ -534,7 +562,7 @@ function DashboardScreen({ role, navigateTo }) {
 
       {/* METRICS / KPI GRID */}
       <section className="metrics-grid">
-        {currentRoleConfig.metrics.map((metric) => {
+        {roleConfig.metrics.map((metric) => {
           const IconComp = metric.icon;
           return (
             <article key={metric.label} className="metric-card">
@@ -561,14 +589,14 @@ function DashboardScreen({ role, navigateTo }) {
           <section>
             <div className="section-header">
               <div className="section-title-group">
-                <h3>Recommended Machinery Near You</h3>
-                <p>Verified, certified operators available in Thanjavur & Papanasam</p>
+                <h3>{t.recommendedMachinery}</h3>
+                <p>{t.recommendedSubtitle}</p>
               </div>
               <button
                 className="section-link-btn"
                 onClick={() => navigateTo("machines")}
               >
-                View all ({machineryData.length}) <ChevronRight size={14} />
+                {t.viewAll} ({machineryData.length}) <ChevronRight size={14} />
               </button>
             </div>
 
@@ -578,6 +606,7 @@ function DashboardScreen({ role, navigateTo }) {
                   key={machine.id}
                   machine={machine}
                   onBook={() => navigateTo("booking", machine)}
+                  t={t}
                 />
               ))}
             </div>
@@ -587,14 +616,14 @@ function DashboardScreen({ role, navigateTo }) {
           <section>
             <div className="section-header">
               <div className="section-title-group">
-                <h3>Active Booking Status</h3>
-                <p>Telemetry dispatch tracking · Order #FQ-2048</p>
+                <h3>{t.activeBookingStatus}</h3>
+                <p>{t.activeBookingSubtitle}</p>
               </div>
               <button
                 className="section-link-btn"
                 onClick={() => navigateTo("tracking")}
               >
-                Full GPS Screen <ChevronRight size={14} />
+                {t.fullGpsScreen} <ChevronRight size={14} />
               </button>
             </div>
 
@@ -606,11 +635,11 @@ function DashboardScreen({ role, navigateTo }) {
                   </div>
                   <div>
                     <span className="status-machine-title">Mahindra 575 DI XP Plus</span>
-                    <span className="status-sub">Assigned Operator: Suresh Kumar · 6 hrs rental</span>
+                    <span className="status-sub">{t.assignedDeliveryPartner}: Suresh Kumar · 6 {t.hours}</span>
                   </div>
                 </div>
                 <span className="badge-in-transit">
-                  <span className="live-pulse" /> In Transit
+                  <span className="live-pulse" /> {t.inTransit}
                 </span>
               </div>
 
@@ -622,23 +651,23 @@ function DashboardScreen({ role, navigateTo }) {
                   <div className="step-dot">
                     <Check size={14} />
                   </div>
-                  <span className="step-title">Confirmed</span>
+                  <span className="step-title">{t.orderConfirmed}</span>
                 </div>
                 <div className="step-node completed">
                   <div className="step-dot">
                     <Check size={14} />
                   </div>
-                  <span className="step-title">Inspected</span>
+                  <span className="step-title">{t.depotInspection}</span>
                 </div>
                 <div className="step-node current">
                   <div className="step-dot">
                     <Truck size={14} />
                   </div>
-                  <span className="step-title">On The Way</span>
+                  <span className="step-title">{t.inTransit}</span>
                 </div>
                 <div className="step-node">
                   <div className="step-dot">4</div>
-                  <span className="step-title">Handover</span>
+                  <span className="step-title">{t.farmHandover}</span>
                 </div>
               </div>
 
@@ -647,15 +676,15 @@ function DashboardScreen({ role, navigateTo }) {
                 <div className="eta-left">
                   <MapPin size={18} style={{ color: "var(--primary-600)" }} />
                   <div className="eta-text">
-                    <small>Estimated Arrival at Ravi's Farm</small>
-                    <strong>Today, 10:40 AM (28 mins remaining)</strong>
+                    <small>{t.farmHandover}</small>
+                    <strong>{t.farmHandoverSub} (28 mins remaining)</strong>
                   </div>
                 </div>
                 <button
                   className="btn-primary"
                   onClick={() => navigateTo("tracking")}
                 >
-                  Track Live GPS
+                  {t.fullGpsScreen}
                 </button>
               </div>
             </article>
@@ -664,13 +693,13 @@ function DashboardScreen({ role, navigateTo }) {
       )}
 
       {role !== "Farmer" && (
-        <RoleWorkspaceDetail role={role} navigateTo={navigateTo} />
+        <RoleWorkspaceDetail role={role} navigateTo={navigateTo} t={t} />
       )}
     </div>
   );
 }
 
-function RoleWorkspaceDetail({ role, navigateTo }) {
+function RoleWorkspaceDetail({ role, navigateTo, t }) {
   if (role === "Machinery Owner") {
     return (
       <div className="two-col-grid">
@@ -729,7 +758,7 @@ function RoleWorkspaceDetail({ role, navigateTo }) {
               <strong>Mahindra 575 DI (TN-49-AB-1024)</strong>
               <p style={{ fontSize: "12px", color: "var(--slate-500)" }}>Next Service in 45 engine hours · Battery 96%</p>
             </div>
-            <span className="machine-status-pill">Active on Field</span>
+            <span className="machine-status-pill">{t.badges_verified}</span>
           </div>
           <div className="pipeline-item">
             <div>
@@ -761,7 +790,7 @@ function RoleWorkspaceDetail({ role, navigateTo }) {
             </div>
           </div>
           <button className="btn-primary" onClick={() => navigateTo("tracking")}>
-            Open Live Nav
+            {t.fullGpsScreen}
           </button>
         </div>
         <div className="pipeline-item">
@@ -813,18 +842,18 @@ function RoleWorkspaceDetail({ role, navigateTo }) {
 // 2. MACHINERY MARKETPLACE SCREEN
 // ============================================================================
 
-function MachinesScreen({ navigateTo }) {
+function MachinesScreen({ navigateTo, t }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [sortBy, setSortBy] = useState("recommended");
 
-  const categories = [
-    { id: "all", label: "All Equipment" },
-    { id: "tractors", label: "Heavy Tractors" },
-    { id: "harvesters", label: "Harvesters" },
-    { id: "tillage", label: "Tillage & Rotavators" },
-    { id: "sprayers", label: "Crop Sprayers" }
-  ];
+  const categories = useMemo(() => [
+    { id: "all", label: t.catAll },
+    { id: "tractors", label: t.catTractors },
+    { id: "harvesters", label: t.catHarvesters },
+    { id: "tillage", label: t.catTillage },
+    { id: "sprayers", label: t.catSprayers }
+  ], [t]);
 
   const [apiMachineryData, setApiMachineryData] = useState(machineryData);
   const [lat, setLat] = useState("10.7905");
@@ -854,7 +883,7 @@ function MachinesScreen({ navigateTo }) {
     const formattedData = apiMachineryData.map(m => ({
       id: m.id,
       name: m.name,
-      brand: m.name.split(" ")[0], // Simple mock
+      brand: m.name.split(" ")[0],
       type: m.category,
       category: ({ TRACTOR: "tractors", HARVESTER: "harvesters", TILLAGE: "tillage", SPRAYER: "sprayers" })[m.category] || m.category,
       pricePerHour: m.pricePerHour,
@@ -866,7 +895,7 @@ function MachinesScreen({ navigateTo }) {
       image: m.imageUrl || m.image,
       implements: ["Rotavator", "Cultivator"],
       fuelType: m.fuelType || "Diesel",
-      badges: m.distance <= 2 ? ["Fast Dispatch", "Top Rated"] : ["Verified"]
+      badges: m.distance <= 2 ? [t.badges_fastDispatch, t.badges_topRated] : [t.badges_verified]
     }));
 
     return formattedData
@@ -886,24 +915,24 @@ function MachinesScreen({ navigateTo }) {
         if (sortBy === "rating") return b.ownerRating - a.ownerRating;
         return 0;
       });
-  }, [searchQuery, activeCategory, sortBy, apiMachineryData]);
+  }, [searchQuery, activeCategory, sortBy, apiMachineryData, t]);
 
   return (
     <div className="screen">
       <div className="marketplace-header">
-        <span className="topbar-subtitle">EQUIPMENT MARKETPLACE</span>
+        <span className="topbar-subtitle">{t.marketplaceSub}</span>
         <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "28px", fontWeight: 700, margin: "4px 0 8px" }}>
-          Verified Agricultural Machinery
+          {t.marketplaceHeading}
         </h2>
         <p style={{ color: "var(--slate-500)", fontSize: "14px" }}>
-          Instant booking with GPS delivery tracking, inspected implements, and optional certified operators.
+          {t.marketplaceDescription}
         </p>
 
         {/* GEO-LOCATION SEARCH WIDGET */}
         <div style={{ marginTop: "16px", display: "flex", gap: "12px", alignItems: "center", background: "var(--primary-50)", padding: "12px 16px", borderRadius: "8px", border: "1px solid var(--primary-200)" }}>
           <MapPin size={20} style={{ color: "var(--primary-700)" }} />
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <span style={{ fontSize: "13px", fontWeight: "bold", color: "var(--primary-900)" }}>My Farm GPS:</span>
+            <span style={{ fontSize: "13px", fontWeight: "bold", color: "var(--primary-900)" }}>{t.myFarmGps}</span>
             <input 
               type="text" 
               value={lat} 
@@ -922,7 +951,7 @@ function MachinesScreen({ navigateTo }) {
               onClick={fetchNearbyMachinery}
               style={{ background: "var(--primary-600)", color: "white", border: "none", padding: "6px 16px", borderRadius: "4px", fontSize: "12px", fontWeight: "bold", cursor: "pointer" }}
             >
-              {isLoading ? "Scanning..." : "Find Nearest"}
+              {isLoading ? t.scanningBtn : t.findNearestBtn}
             </button>
           </div>
         </div>
@@ -935,7 +964,7 @@ function MachinesScreen({ navigateTo }) {
             <Search size={18} style={{ color: "var(--slate-400)" }} />
             <input
               type="text"
-              placeholder="Search tractors, combine harvesters, rotavators, brands..."
+              placeholder={t.searchMachineryPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -949,15 +978,15 @@ function MachinesScreen({ navigateTo }) {
           <div style={{ display: "flex", gap: "8px" }}>
             <select
               className="form-control"
-              style={{ minHeight: "44px", width: "170px" }}
+              style={{ minHeight: "44px", width: "180px" }}
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
-              <option value="recommended">Sort: Recommended</option>
-              <option value="distance">Nearest Distance</option>
-              <option value="priceAsc">Price: Low to High</option>
-              <option value="priceDesc">Price: High to Low</option>
-              <option value="rating">Highest Rated</option>
+              <option value="recommended">{t.sortRecommended}</option>
+              <option value="distance">{t.sortDistance}</option>
+              <option value="priceAsc">{t.sortPriceLow}</option>
+              <option value="priceDesc">{t.sortPriceHigh}</option>
+              <option value="rating">{t.sortRating}</option>
             </select>
           </div>
         </div>
@@ -978,14 +1007,14 @@ function MachinesScreen({ navigateTo }) {
 
       {/* DISCOVERY MAP WIDGET */}
       <div style={{ height: "300px", borderRadius: "12px", overflow: "hidden", border: "1px solid var(--slate-200)", marginBottom: "20px" }}>
-        <MapContainer center={[parseFloat(lat), parseFloat(lng)]} zoom={12} style={{ height: "100%", width: "100%", zIndex: 1 }}>
+        <MapContainer center={[parseFloat(lat) || 10.7905, parseFloat(lng) || 79.1378]} zoom={12} style={{ height: "100%", width: "100%", zIndex: 1 }}>
           <TileLayer
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
             attribution='&copy; <a href="https://carto.com/">CARTO</a>'
           />
           {/* Farm Pin */}
-          <Marker position={[parseFloat(lat), parseFloat(lng)]}>
-            <Popup><strong>My Farm</strong></Popup>
+          <Marker position={[parseFloat(lat) || 10.7905, parseFloat(lng) || 79.1378]}>
+            <Popup><strong>{t.destinationFarmMarker}</strong></Popup>
           </Marker>
 
           {/* Machinery Pins */}
@@ -995,8 +1024,8 @@ function MachinesScreen({ navigateTo }) {
                 <Marker key={m.id} position={[m.latitude, m.longitude]}>
                   <Popup>
                     <strong>{m.name}</strong><br/>
-                    {m.distance} km away<br/>
-                    ₹{m.pricePerHour}/hr
+                    {m.distance} km<br/>
+                    ₹{m.pricePerHour}{t.perHour}
                   </Popup>
                 </Marker>
               );
@@ -1009,11 +1038,11 @@ function MachinesScreen({ navigateTo }) {
       {/* RESULTS COUNT & META */}
       <div className="results-meta-bar">
         <span className="results-count">
-          Showing <strong>{filteredMachines.length} verified machines</strong> near Thanjavur (10 km radius)
+          {t.showing} <strong>{filteredMachines.length} {t.verifiedMachinesRadius}</strong>
         </span>
         <span style={{ fontSize: "12px", color: "var(--slate-500)" }}>
           <ShieldCheck size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px", color: "var(--primary-600)" }} />
-          100% Quality Inspected
+          {t.qualityInspected100}
         </span>
       </div>
 
@@ -1025,16 +1054,14 @@ function MachinesScreen({ navigateTo }) {
             machine={machine}
             detailed
             onBook={() => navigateTo("booking", machine)}
+            t={t}
           />
         ))}
 
         {filteredMachines.length === 0 && (
           <div style={{ textAlign: "center", padding: "48px 24px", background: "var(--white)", borderRadius: "var(--radius-lg)" }}>
             <AlertCircle size={36} style={{ color: "var(--slate-400)", margin: "0 auto 12px" }} />
-            <h3 style={{ fontSize: "16px", fontWeight: 700 }}>No machinery matched your filters</h3>
-            <p style={{ color: "var(--slate-500)", fontSize: "13px", marginTop: "4px" }}>
-              Try broadening your search query or reset the category filters.
-            </p>
+            <h3 style={{ fontSize: "16px", fontWeight: 700 }}>{t.noMachineryFound}</h3>
             <button
               className="btn-secondary"
               style={{ marginTop: "16px" }}
@@ -1043,7 +1070,7 @@ function MachinesScreen({ navigateTo }) {
                 setActiveCategory("all");
               }}
             >
-              Reset Filters
+              {t.resetFilters}
             </button>
           </div>
         )}
@@ -1052,7 +1079,7 @@ function MachinesScreen({ navigateTo }) {
   );
 }
 
-function MachineCardPro({ machine, onBook, detailed = false }) {
+function MachineCardPro({ machine, onBook, detailed = false, t }) {
   return (
     <article className="machine-card-pro">
       <div className="machine-img-wrapper">
@@ -1061,7 +1088,7 @@ function MachineCardPro({ machine, onBook, detailed = false }) {
         {machine.verified && (
           <span className="machine-verified-badge">
             <ShieldCheck size={12} />
-            <span>Verified</span>
+            <span>{t.badges_verified}</span>
           </span>
         )}
       </div>
@@ -1082,7 +1109,7 @@ function MachineCardPro({ machine, onBook, detailed = false }) {
           <div className="machine-specs-grid">
             <div className="spec-item">
               <Gauge size={14} />
-              <span>{machine.hp} Horsepower</span>
+              <span>{machine.hp} {t.hp}</span>
             </div>
             <div className="spec-item">
               <MapPin size={14} />
@@ -1090,7 +1117,7 @@ function MachineCardPro({ machine, onBook, detailed = false }) {
             </div>
             <div className="spec-item">
               <Star size={14} style={{ color: "var(--amber-500)", fill: "var(--amber-500)" }} />
-              <span><strong>{machine.ownerRating}</strong> ({machine.reviewsCount} reviews)</span>
+              <span><strong>{machine.ownerRating}</strong> ({machine.reviewsCount} {t.reviews})</span>
             </div>
             <div className="spec-item">
               <Fuel size={14} />
@@ -1122,11 +1149,11 @@ function MachineCardPro({ machine, onBook, detailed = false }) {
         <div className="machine-footer">
           <div className="price-box">
             <span className="price-amount">₹{machine.pricePerHour.toLocaleString("en-IN")}</span>
-            <span className="price-unit">/ hour</span>
+            <span className="price-unit">{t.perHour}</span>
           </div>
 
           <button className="btn-primary" onClick={onBook}>
-            <span>Reserve Machinery</span>
+            <span>{t.reserveMachineryBtn}</span>
             <ChevronRight size={15} />
           </button>
         </div>
@@ -1139,7 +1166,7 @@ function MachineCardPro({ machine, onBook, detailed = false }) {
 // 3. BOOKING ENGINE WITH LIVE QUOTE
 // ============================================================================
 
-function BookingScreen({ selectedMachine, navigateTo, setBookingDraft }) {
+function BookingScreen({ selectedMachine, navigateTo, setBookingDraft, t }) {
   const machine = selectedMachine || machineryData[0];
   const [rentalDate, setRentalDate] = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10));
   const [startTime, setStartTime] = useState("08:00");
@@ -1187,18 +1214,18 @@ function BookingScreen({ selectedMachine, navigateTo, setBookingDraft }) {
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", borderBottom: "1px solid var(--slate-100)", paddingBottom: "12px" }}>
             <div>
               <strong style={{ fontSize: "16px", color: "var(--slate-900)" }}>{machine.name}</strong>
-              <p style={{ fontSize: "12px", color: "var(--slate-500)" }}>{rentalDate} · {startTime} ({durationHours} hours duration)</p>
+              <p style={{ fontSize: "12px", color: "var(--slate-500)" }}>{rentalDate} · {startTime} ({durationHours} {t.hours})</p>
             </div>
-            <span className="machine-status-pill">Pending Advance</span>
+            <span className="machine-status-pill">{t.advanceTokenRequired}</span>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", fontSize: "13px" }}>
             <div>
-              <span style={{ color: "var(--slate-500)", display: "block" }}>50% Advance Token:</span>
+              <span style={{ color: "var(--slate-500)", display: "block" }}>{t.advanceTokenRequired}</span>
               <strong style={{ fontSize: "18px", color: "var(--primary-700)" }}>₹{advanceAmount.toLocaleString("en-IN")}</strong>
             </div>
             <div>
-              <span style={{ color: "var(--slate-500)", display: "block" }}>Balance upon Handover:</span>
+              <span style={{ color: "var(--slate-500)", display: "block" }}>{t.remainingPayable}</span>
               <strong style={{ fontSize: "18px", color: "var(--slate-900)" }}>₹{balanceOnDelivery.toLocaleString("en-IN")}</strong>
             </div>
           </div>
@@ -1207,10 +1234,10 @@ function BookingScreen({ selectedMachine, navigateTo, setBookingDraft }) {
         <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
           <button className="btn-primary btn-lg" onClick={() => navigateTo("payments")}>
             <CreditCard size={18} />
-            <span>Proceed to 50% Advance Payment</span>
+            <span>{t.paySecurelyBtn}</span>
           </button>
           <button className="btn-secondary" onClick={() => setIsSubmitted(false)}>
-            Edit Schedule
+            {t.changeMachine}
           </button>
         </div>
       </div>
@@ -1220,12 +1247,12 @@ function BookingScreen({ selectedMachine, navigateTo, setBookingDraft }) {
   return (
     <div className="screen">
       <div className="marketplace-header">
-        <span className="topbar-subtitle">BOOKING & SCHEDULE</span>
+        <span className="topbar-subtitle">{t.bookingSub}</span>
         <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "28px", fontWeight: 700, margin: "4px 0 8px" }}>
-          Reserve Agricultural Machinery
+          {t.bookingHeading}
         </h2>
         <p style={{ color: "var(--slate-500)", fontSize: "14px" }}>
-          Set your farm location, rental duration, and optional certified operator.
+          {t.bookingDescription}
         </p>
       </div>
 
@@ -1237,7 +1264,7 @@ function BookingScreen({ selectedMachine, navigateTo, setBookingDraft }) {
             <div className="selected-machine-meta">
               <img src={machine.image} alt={machine.name} className="selected-thumb" />
               <div>
-                <span className="topbar-subtitle" style={{ fontSize: "10px" }}>SELECTED EQUIPMENT</span>
+                <span className="topbar-subtitle" style={{ fontSize: "10px" }}>{t.marketplaceSub}</span>
                 <strong style={{ fontSize: "15px", display: "block", color: "var(--slate-900)" }}>{machine.name}</strong>
                 <p style={{ fontSize: "12px", color: "var(--slate-500)" }}>{machine.owner} · {machine.distance}</p>
               </div>
@@ -1247,14 +1274,14 @@ function BookingScreen({ selectedMachine, navigateTo, setBookingDraft }) {
               style={{ padding: "6px 12px", fontSize: "12px" }}
               onClick={() => navigateTo("machines")}
             >
-              Change Machine
+              {t.changeMachine}
             </button>
           </div>
 
-          <h3 className="form-panel-title">1. Schedule & Duration</h3>
+          <h3 className="form-panel-title">{t.bookingDetailsHeader}</h3>
           <div className="form-row-2">
             <div className="form-group">
-              <label>Rental Date</label>
+              <label>{t.selectWorkDate}</label>
               <input
                 type="date"
                 className="form-control"
@@ -1263,7 +1290,7 @@ function BookingScreen({ selectedMachine, navigateTo, setBookingDraft }) {
               />
             </div>
             <div className="form-group">
-              <label>Start Time</label>
+              <label>{t.startTime}</label>
               <input
                 type="time"
                 className="form-control"
@@ -1276,9 +1303,9 @@ function BookingScreen({ selectedMachine, navigateTo, setBookingDraft }) {
           {/* DURATION RANGE SLIDER */}
           <div className="range-slider-wrapper">
             <div className="range-slider-header">
-              <span>Rental Duration</span>
+              <span>{t.rentalDurationHours}</span>
               <strong style={{ color: "var(--primary-700)" }}>
-                {durationHours} Hours (Est. {Math.round(durationHours * 1.2)} Acres Coverage)
+                {durationHours} {t.hours} (Est. {Math.round(durationHours * 1.2)} Acres)
               </strong>
             </div>
             <input
@@ -1291,15 +1318,15 @@ function BookingScreen({ selectedMachine, navigateTo, setBookingDraft }) {
               onChange={(e) => setDurationHours(Number(e.target.value))}
             />
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--slate-400)", marginTop: "6px" }}>
-              <span>2 hrs (Min)</span>
-              <span>8 hrs (Full Day)</span>
-              <span>16 hrs (2 Shifts)</span>
+              <span>2 {t.hours}</span>
+              <span>8 {t.hours}</span>
+              <span>16 {t.hours}</span>
             </div>
           </div>
 
-          <h3 className="form-panel-title" style={{ marginTop: "24px" }}>2. Delivery Destination</h3>
+          <h3 className="form-panel-title" style={{ marginTop: "24px" }}>2. Destination</h3>
           <div className="form-group">
-            <label>Farm Address & Coordinates</label>
+            <label>Farm Address</label>
             <div style={{ position: "relative" }}>
               <input
                 type="text"
@@ -1320,67 +1347,67 @@ function BookingScreen({ selectedMachine, navigateTo, setBookingDraft }) {
               onChange={(e) => setIncludeOperator(e.target.checked)}
             />
             <div className="checkbox-text">
-              <strong>Add Certified Equipment Operator (+₹180/hr)</strong>
-              <small>TNAU certified operator trained in precision tillage and safety protocols.</small>
+              <strong>{t.addOperatorOption}</strong>
+              <small>{t.addOperatorSub}</small>
             </div>
           </label>
         </section>
 
         {/* PRICE SUMMARY SIDEBAR */}
         <aside className="summary-panel">
-          <span className="summary-eyebrow">TRANSPARENT PRICING</span>
-          <h3 className="summary-title">Cost Breakdown</h3>
+          <span className="summary-eyebrow">{t.transparentPricing}</span>
+          <h3 className="summary-title">{t.costBreakdown}</h3>
 
           <div className="summary-row">
-            <span>Machinery Rental ({durationHours} hrs × ₹{machine.pricePerHour})</span>
+            <span>{t.machineryRentalFee} ({durationHours} {t.hours} × ₹{machine.pricePerHour})</span>
             <strong>₹{baseRental.toLocaleString("en-IN")}</strong>
           </div>
 
           <div className="summary-row">
-            <span>Delivery & Depot Return (Flat)</span>
+            <span>{t.deliveryLogisticsFee}</span>
             <strong>₹{deliveryLogistics.toLocaleString("en-IN")}</strong>
           </div>
 
           {includeOperator && (
             <div className="summary-row">
-              <span>Certified Operator ({durationHours} hrs × ₹180)</span>
+              <span>{t.certifiedOperatorFee} ({durationHours} {t.hours} × ₹180)</span>
               <strong>₹{operatorFee.toLocaleString("en-IN")}</strong>
             </div>
           )}
 
           <div className="summary-row discount">
-            <span>First Booking Promo Discount</span>
+            <span>{t.promoDiscount}</span>
             <strong>−₹{seasonalDiscount.toLocaleString("en-IN")}</strong>
           </div>
 
           <hr className="summary-divider" />
 
           <div className="summary-total">
-            <span>Estimated Total</span>
+            <span>{t.estimatedTotal}</span>
             <strong>₹{grandTotal.toLocaleString("en-IN")}</strong>
           </div>
 
           {/* ADVANCE NOTE */}
           <div style={{ background: "var(--primary-50)", border: "1px solid var(--primary-200)", borderRadius: "var(--radius-md)", padding: "12px", marginBottom: "16px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", fontWeight: 700, color: "var(--primary-900)" }}>
-              <span>50% Advance Token Required:</span>
+              <span>{t.advanceTokenRequired}</span>
               <span>₹{advanceAmount.toLocaleString("en-IN")}</span>
             </div>
             <p style={{ fontSize: "11px", color: "var(--primary-800)", marginTop: "4px" }}>
-              Remaining ₹{balanceOnDelivery.toLocaleString("en-IN")} payable after inspection upon delivery.
+              {t.remainingPayable}
             </p>
           </div>
 
           <div className="security-note">
             <ShieldCheck size={18} style={{ color: "var(--primary-600)", flexShrink: 0 }} />
-            <span>FarmIQ 100% Escrow Guarantee: Full refund if machinery is delayed or fails inspection.</span>
+            <span>{t.escrowGuaranteeText}</span>
           </div>
 
           <button className="btn-primary btn-full btn-lg" onClick={() => {
             setBookingDraft({ rentalDate, startTime, durationHours, includeOperator, deliveryAddress, farmLat: 10.7905, farmLng: 79.1378 });
             setIsSubmitted(true);
           }}>
-            <span>Confirm & Request Booking</span>
+            <span>{t.confirmRequestBtn}</span>
             <ArrowRight size={16} />
           </button>
         </aside>
@@ -1393,33 +1420,33 @@ function BookingScreen({ selectedMachine, navigateTo, setBookingDraft }) {
 // 4. PAYMENTS & ESCROW SCREEN
 // ============================================================================
 
-function PaymentsScreen({ navigateTo, selectedMachine, bookingDraft, session }) {
+function PaymentsScreen({ navigateTo, selectedMachine, bookingDraft, session, t }) {
   const [selectedMethod, setSelectedMethod] = useState("upi");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [paymentError, setPaymentError] = useState("");
 
-  const paymentMethods = [
+  const paymentMethods = useMemo(() => [
     {
       id: "upi",
-      name: "UPI Instant Payment",
-      note: "Google Pay, PhonePe, Paytm, BHIM or any UPI App",
+      name: t.methodUpiTitle,
+      note: t.methodUpiNote,
       icon: IndianRupee,
-      badge: "Fastest & Recommended"
+      badge: t.methodUpiBadge
     },
     {
       id: "card",
-      name: "Debit / Credit / Kisan Card",
-      note: "RuPay, Visa, MasterCard, State Bank Kisan Credit Card",
+      name: t.methodCardTitle,
+      note: t.methodCardNote,
       icon: CreditCard
     },
     {
       id: "cash",
-      name: "Assisted Cash at Kisan Seva Kendra",
-      note: "Pay cash at authorized village CSC point with receipt",
+      name: t.methodCashTitle,
+      note: t.methodCashNote,
       icon: User
     }
-  ];
+  ], [t]);
 
   const handlePay = async () => {
     setIsProcessing(true);
@@ -1474,17 +1501,17 @@ function PaymentsScreen({ navigateTo, selectedMachine, bookingDraft, session }) 
         >
           <CheckCircle2 size={40} />
         </div>
-        <span className="topbar-subtitle">PAYMENT SUCCESSFUL</span>
+        <span className="topbar-subtitle">{t.paymentSuccessful}</span>
         <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "30px", fontWeight: 700, margin: "8px 0" }}>
-          Advance Protected in Escrow
+          {t.advanceProtectedEscrow}
         </h2>
         <p style={{ color: "var(--slate-600)", fontSize: "14px", marginBottom: "24px" }}>
-          Transaction Reference: <strong>TXN_FQ98472901</strong>. Escrow locked and nearest driver assigned!
+          {t.transactionRef} <strong>TXN_FQ98472901</strong>. {t.escrowLockedNotice}
         </p>
 
         <button className="btn-primary btn-lg" onClick={() => navigateTo("tracking")}>
           <Truck size={18} />
-          <span>Track Live Delivery GPS</span>
+          <span>{t.trackLiveGpsBtn}</span>
         </button>
       </div>
     );
@@ -1493,12 +1520,12 @@ function PaymentsScreen({ navigateTo, selectedMachine, bookingDraft, session }) 
   return (
     <div className="screen">
       <div className="marketplace-header">
-        <span className="topbar-subtitle">FINTECH & ESCROW GATEWAY</span>
+        <span className="topbar-subtitle">{t.paymentsSub}</span>
         <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "28px", fontWeight: 700, margin: "4px 0 8px" }}>
-          50% Advance Payment
+          {t.paymentsHeading}
         </h2>
         <p style={{ color: "var(--slate-500)", fontSize: "14px" }}>
-          Booking #FQ-2051 · Funds remain locked in FarmIQ Escrow until machine delivery inspection is approved.
+          {t.paymentsDescription}
         </p>
       </div>
 
@@ -1506,14 +1533,14 @@ function PaymentsScreen({ navigateTo, selectedMachine, bookingDraft, session }) 
         <section className="form-panel">
           <div style={{ background: "var(--primary-50)", border: "1px solid var(--primary-200)", padding: "16px", borderRadius: "var(--radius-md)", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <span className="topbar-subtitle" style={{ fontSize: "10px" }}>AMOUNT PAYABLE NOW</span>
+              <span className="topbar-subtitle" style={{ fontSize: "10px" }}>{t.amountPayableNow}</span>
               <strong style={{ fontSize: "24px", color: "var(--primary-900)", display: "block" }}>₹4,340.00</strong>
-              <small style={{ color: "var(--primary-700)" }}>50% Advance token for Mahindra 575 DI (6 hrs)</small>
+              <small style={{ color: "var(--primary-700)" }}>{t.advanceTokenFor} Mahindra 575 DI (6 {t.hours})</small>
             </div>
             <ShieldCheck size={32} style={{ color: "var(--primary-700)" }} />
           </div>
 
-          <h3 className="form-panel-title">Choose Payment Method</h3>
+          <h3 className="form-panel-title">{t.selectPaymentMethod}</h3>
           {paymentMethods.map((pm) => {
             const IconComponent = pm.icon;
             const isSelected = selectedMethod === pm.id;
@@ -1544,11 +1571,11 @@ function PaymentsScreen({ navigateTo, selectedMachine, bookingDraft, session }) 
             disabled={isProcessing}
           >
             {isProcessing ? (
-              <span>Securing Transaction...</span>
+              <span>{t.processingPayment}</span>
             ) : (
               <>
                 <ShieldCheck size={18} />
-                <span>Pay ₹4,340 Securely</span>
+                <span>{t.paySecurelyBtn}</span>
               </>
             )}
           </button>
@@ -1559,30 +1586,30 @@ function PaymentsScreen({ navigateTo, selectedMachine, bookingDraft, session }) 
         <aside className="trust-hero-card">
           <span className="summary-eyebrow" style={{ color: "var(--primary-400)" }}>FARMIQ PROTECTION</span>
           <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "22px", fontWeight: 700, margin: "6px 0 16px" }}>
-            Guaranteed Trust in Every Rental
+            {t.guaranteedTrustTitle}
           </h3>
 
           <div className="trust-item">
             <ShieldCheck size={24} />
             <div>
-              <strong>Escrow Protection</strong>
-              <p>The machinery owner receives payment only after you confirm handover and inspection.</p>
+              <strong>{t.escrowProtectionTitle}</strong>
+              <p>{t.escrowProtectionDesc}</p>
             </div>
           </div>
 
           <div className="trust-item">
             <Wrench size={24} />
             <div>
-              <strong>On-Field Replacement</strong>
-              <p>If machinery malfunctions during operation, an emergency replacement is dispatched immediately.</p>
+              <strong>{t.onFieldReplacementTitle}</strong>
+              <p>{t.onFieldReplacementDesc}</p>
             </div>
           </div>
 
           <div className="trust-item">
             <PhoneCall size={24} />
             <div>
-              <strong>Live Tele-Support</strong>
-              <p>Regional language support advisors are on standby throughout your entire rental window.</p>
+              <strong>{t.liveTeleSupportTitle}</strong>
+              <p>{t.liveTeleSupportDesc}</p>
             </div>
           </div>
         </aside>
@@ -1595,7 +1622,7 @@ function PaymentsScreen({ navigateTo, selectedMachine, bookingDraft, session }) 
 // 5. TELEMETRY & LIVE GPS TRACKING SCREEN
 // ============================================================================
 
-function TrackingScreen() {
+function TrackingScreen({ t }) {
   const [ride, setRide] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -1619,8 +1646,8 @@ function TrackingScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  if (loading) return <div className="screen" style={{ padding: 40, textAlign: "center" }}>Loading Live Satellite Feed...</div>;
-  if (!ride) return <div className="screen" style={{ padding: 40, textAlign: "center" }}>No active dispatch found.</div>;
+  if (loading) return <div className="screen" style={{ padding: 40, textAlign: "center" }}>{t.loadingSatellite}</div>;
+  if (!ride) return <div className="screen" style={{ padding: 40, textAlign: "center" }}>{t.noActiveDispatchFound}</div>;
 
   const farmPos = [ride.farmLat || 10.7905, ride.farmLng || 79.1378];
   const driverPos = [ride.driver?.latitude || 10.7950, ride.driver?.longitude || 79.1400];
@@ -1629,12 +1656,12 @@ function TrackingScreen() {
   return (
     <div className="screen">
       <div className="marketplace-header">
-        <span className="topbar-subtitle">LIVE TELEMATICS & GPS TRACKER</span>
+        <span className="topbar-subtitle">{t.telematicsSub}</span>
         <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "28px", fontWeight: 700, margin: "4px 0 8px" }}>
-          {ride.machinery?.name || 'Machinery'} Dispatch
+          {ride.machinery?.name || 'Machinery'} {t.dispatchTelematics}
         </h2>
         <p style={{ color: "var(--slate-500)", fontSize: "14px" }}>
-          Booking #{ride.id.substring(0,8).toUpperCase()} · Routing via Geo-Sat Array
+          Booking #{ride.id.substring(0,8).toUpperCase()} · {t.routingGeoSat}
         </p>
       </div>
 
@@ -1648,12 +1675,12 @@ function TrackingScreen() {
             />
             {/* Driver Marker */}
             <Marker position={driverPos}>
-              <Popup><strong>{ride.driver?.fullName}</strong><br/>En route with equipment.</Popup>
+              <Popup><strong>{ride.driver?.fullName}</strong><br/>{t.driverEnRouteMarker}</Popup>
             </Marker>
             
             {/* Farm Marker */}
             <Marker position={farmPos}>
-              <Popup><strong>Destination (Your Farm)</strong></Popup>
+              <Popup><strong>{t.destinationFarmMarker}</strong></Popup>
             </Marker>
             
             {/* Route Line */}
@@ -1666,7 +1693,7 @@ function TrackingScreen() {
           <div className="driver-profile-card">
             <div className="driver-avatar">{ride.driver?.fullName.substring(0, 2).toUpperCase() || 'DR'}</div>
             <div style={{ flex: 1 }}>
-              <span className="topbar-subtitle" style={{ fontSize: "10px" }}>ASSIGNED OPERATOR</span>
+              <span className="topbar-subtitle" style={{ fontSize: "10px" }}>{t.assignedOperatorHeader}</span>
               <strong style={{ fontSize: "14px", display: "block", color: "var(--slate-900)" }}>{ride.driver?.fullName || 'Assigning...'}</strong>
               <p style={{ fontSize: "12px", color: "var(--amber-700)" }}>★ 4.9 · {ride.driver?.phone || 'Connecting'}</p>
             </div>
@@ -1676,17 +1703,17 @@ function TrackingScreen() {
               style={{ padding: "8px 12px", fontSize: "12px" }}
             >
               <Phone size={14} />
-              Call
+              {t.callDriver}
             </a>
           </div>
 
-          <h3 className="form-panel-title" style={{ marginTop: "24px" }}>Active Handover Pipeline</h3>
+          <h3 className="form-panel-title" style={{ marginTop: "24px" }}>{t.activeHandoverPipeline}</h3>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "12px" }}>
             <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
               <CheckCircle size={18} style={{ color: "var(--primary-600)", flexShrink: 0, marginTop: "2px" }} />
               <div>
-                <strong style={{ fontSize: "13px", color: "var(--slate-900)", display: "block" }}>Payment Escrowed</strong>
+                <strong style={{ fontSize: "13px", color: "var(--slate-900)", display: "block" }}>{t.paymentEscrowedTitle}</strong>
                 <small style={{ color: "var(--slate-500)" }}>₹{ride.advancePaid} locked for {ride.machinery?.name}</small>
               </div>
             </div>
@@ -1694,16 +1721,16 @@ function TrackingScreen() {
             <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
               <CheckCircle size={18} style={{ color: "var(--primary-600)", flexShrink: 0, marginTop: "2px" }} />
               <div>
-                <strong style={{ fontSize: "13px", color: "var(--slate-900)", display: "block" }}>Smart Driver Assigned</strong>
-                <small style={{ color: "var(--slate-500)" }}>Matched with closest operator: {ride.driver?.fullName}</small>
+                <strong style={{ fontSize: "13px", color: "var(--slate-900)", display: "block" }}>{t.smartDriverAssignedTitle}</strong>
+                <small style={{ color: "var(--slate-500)" }}>{t.matchedClosestOperator} {ride.driver?.fullName}</small>
               </div>
             </div>
 
             <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
               <Truck size={18} style={{ color: "var(--primary-600)", flexShrink: 0, marginTop: "2px" }} />
               <div>
-                <strong style={{ fontSize: "13px", color: "var(--primary-800)", display: "block" }}>On The Way (GPS Live)</strong>
-                <small style={{ color: "var(--slate-500)" }}>Driver tracking ping updated 2s ago</small>
+                <strong style={{ fontSize: "13px", color: "var(--primary-800)", display: "block" }}>{t.onTheWayGpsLive}</strong>
+                <small style={{ color: "var(--slate-500)" }}>{t.driverPingUpdated}</small>
               </div>
             </div>
           </div>
@@ -1717,26 +1744,26 @@ function TrackingScreen() {
 // 6. SUPPORT & AI KISAN ASSISTANT SCREEN
 // ============================================================================
 
-function SupportScreen({ language }) {
-  const [messages, setMessages] = useState([
-    {
-      id: "1",
-      sender: "bot",
-      text: language === "ta"
-        ? "வணக்கம் ரவி! நான் FarmIQ விவசாய உதவியாளர். டிராக்டர் முன்பதிவு, 50% அட்வான்ஸ் அல்லது உபகரண வழிகாட்டுதலில் நான் உங்களுக்கு எவ்வாறு உதவ முடியும்?"
-        : language === "hi"
-        ? "नमस्ते रवि! मैं FarmIQ किसान सहायक हूँ। कृषि मशीनरी बुकिंग, अग्रिम भुगतान या संचालन ट्यूटोरियल में मैं आपकी क्या मदद कर सकता हूँ?"
-        : "Hello Ravi! I am your FarmIQ Agri-Assistant. How can I assist you with equipment reservations, 50% advance escrow, or machinery tutorials today?"
-    }
-  ]);
+function SupportScreen({ language, t }) {
+  const [messages, setMessages] = useState([]);
   const [inputVal, setInputVal] = useState("");
 
-  const quickPrompts = [
-    "How does 50% advance escrow work?",
-    "Recommend tractor for 4 acres paddy land",
-    "What implements are available for rotavator?",
-    "How to verify equipment inspection?"
-  ];
+  useEffect(() => {
+    setMessages([
+      {
+        id: "init",
+        sender: "bot",
+        text: t.botGreeting
+      }
+    ]);
+  }, [language, t]);
+
+  const quickPrompts = useMemo(() => [
+    t.quickPrompt1,
+    t.quickPrompt2,
+    t.quickPrompt3,
+    t.quickPrompt4
+  ], [t]);
 
   const handleSend = (textToSend) => {
     const text = textToSend || inputVal;
@@ -1747,13 +1774,12 @@ function SupportScreen({ language }) {
     setInputVal("");
 
     setTimeout(() => {
-      let reply = "Our support line is ready to assist you. ";
-      if (text.toLowerCase().includes("escrow") || text.toLowerCase().includes("advance")) {
-        reply = "With FarmIQ Escrow, your 50% advance is held securely in a bank-guaranteed account. The machinery owner only receives payment after the delivery person arrives at your farm and you approve the inspection checklist.";
-      } else if (text.toLowerCase().includes("paddy") || text.toLowerCase().includes("tractor")) {
-        reply = "For 4 acres of wet paddy field in Thanjavur, we recommend the Kubota MU4501 4WD (45 HP) or Mahindra 575 DI. Both offer high torque in muddy soil with minimal fuel consumption.";
-      } else {
-        reply = "I've logged your query. You can also connect directly with our regional agricultural specialist at toll-free 1800 123 4567.";
+      let reply = t.botReplyDefault;
+      const lower = text.toLowerCase();
+      if (lower.includes("escrow") || lower.includes("advance") || lower.includes("எஸ்க்ரோ") || lower.includes("அட்வான்ஸ்") || lower.includes("एस्क्रो") || lower.includes("अग्रिम")) {
+        reply = t.botReplyEscrow;
+      } else if (lower.includes("paddy") || lower.includes("tractor") || lower.includes("நெல்") || lower.includes("டிராக்டர்") || lower.includes("धान") || lower.includes("ट्रैक्टर")) {
+        reply = t.botReplyPaddy;
       }
 
       setMessages((prev) => [
@@ -1766,12 +1792,12 @@ function SupportScreen({ language }) {
   return (
     <div className="screen">
       <div className="marketplace-header">
-        <span className="topbar-subtitle">HELP, EDUCATION & AI KISAN ASSISTANT</span>
+        <span className="topbar-subtitle">{t.supportSub}</span>
         <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "28px", fontWeight: 700, margin: "4px 0 8px" }}>
-          Agricultural Guidance in Your Language
+          {t.supportHeading}
         </h2>
         <p style={{ color: "var(--slate-500)", fontSize: "14px" }}>
-          Get instant answers on machinery operation, escrow security, or connect with agronomists.
+          {t.supportDescription}
         </p>
       </div>
 
@@ -1781,19 +1807,19 @@ function SupportScreen({ language }) {
           <div className="help-card-icon">
             <Bot size={22} />
           </div>
-          <h4>FarmIQ AI Agri-Bot</h4>
-          <p>Instant answers on machinery specs, soil suitability, and booking calculations.</p>
-          <span style={{ fontSize: "12px", fontWeight: "bold", color: "var(--primary-700)" }}>Available 24/7 in 3 Languages</span>
+          <h4>{t.aiBotChannelTitle}</h4>
+          <p>{t.aiBotChannelDesc}</p>
+          <span style={{ fontSize: "12px", fontWeight: "bold", color: "var(--primary-700)" }}>{t.aiBotChannelBadge}</span>
         </div>
 
         <div className="help-card-pro">
           <div className="help-card-icon">
             <PhoneCall size={22} />
           </div>
-          <h4>Regional Phone Helpline</h4>
-          <p>Talk to local agronomists in Tamil, Hindi, or English for phone-assisted bookings.</p>
+          <h4>{t.helplineChannelTitle}</h4>
+          <p>{t.helplineChannelDesc}</p>
           <a href="tel:18001234567" style={{ fontSize: "12px", fontWeight: "bold", color: "var(--primary-700)" }}>
-            Call 1800 123 4567 →
+            {t.helplineChannelLink}
           </a>
         </div>
 
@@ -1801,9 +1827,9 @@ function SupportScreen({ language }) {
           <div className="help-card-icon">
             <PlayCircle size={22} />
           </div>
-          <h4>Machinery Video Tutorials</h4>
-          <p>Step-by-step video lessons on operating rotavators, harvesters, and boom sprayers safely.</p>
-          <span style={{ fontSize: "12px", fontWeight: "bold", color: "var(--primary-700)" }}>12 Verified Modules</span>
+          <h4>{t.tutorialsChannelTitle}</h4>
+          <p>{t.tutorialsChannelDesc}</p>
+          <span style={{ fontSize: "12px", fontWeight: "bold", color: "var(--primary-700)" }}>{t.tutorialsChannelBadge}</span>
         </div>
       </div>
 
@@ -1812,8 +1838,8 @@ function SupportScreen({ language }) {
         <div className="chat-header-pro">
           <Bot size={20} />
           <div>
-            <strong style={{ fontSize: "14px", display: "block" }}>FarmIQ AI Assistant</strong>
-            <small style={{ fontSize: "11px", color: "var(--primary-400)" }}>Active · Instant Response</small>
+            <strong style={{ fontSize: "14px", display: "block" }}>{t.aiAssistantTitle}</strong>
+            <small style={{ fontSize: "11px", color: "var(--primary-400)" }}>{t.aiAssistantStatus}</small>
           </div>
         </div>
 
@@ -1860,7 +1886,7 @@ function SupportScreen({ language }) {
         <div className="chat-footer-pro">
           <input
             type="text"
-            placeholder="Ask anything about farm machinery, advance payment, or soil prep..."
+            placeholder={t.askAssistantPlaceholder}
             value={inputVal}
             onChange={(e) => setInputVal(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
@@ -1879,7 +1905,7 @@ function SupportScreen({ language }) {
 // 7. ACCOUNT & AUTHENTICATION PORTAL
 // ============================================================================
 
-function AccountScreen({ navigateTo, onLogin }) {
+function AccountScreen({ navigateTo, onLogin, t }) {
   const [isRegister, setIsRegister] = useState(false);
   const [accountId, setAccountId] = useState("FARM-001");
   const [password, setPassword] = useState("FarmIQ@F01");
@@ -1921,12 +1947,12 @@ function AccountScreen({ navigateTo, onLogin }) {
             <div className="brand-icon-box" style={{ marginBottom: "24px" }}>
               <Tractor size={28} />
             </div>
-            <span className="hero-tag">ENTERPRISE AGRI-TECH</span>
+            <span className="hero-tag">{t.heroTagEnterprise}</span>
             <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "36px", fontWeight: 700, margin: "12px 0 16px", lineHeight: "1.2" }}>
-              Modern Agricultural Machinery Within Every Farmer's Reach.
+              {t.heroHeadingPromise}
             </h2>
             <p style={{ color: "rgba(255,255,255,0.75)", fontSize: "14px", lineHeight: "1.6" }}>
-              Book trusted equipment, coordinate GPS delivery, and safeguard transactions with advance escrow.
+              {t.heroPromiseDescription}
             </p>
           </div>
 
@@ -1934,11 +1960,11 @@ function AccountScreen({ navigateTo, onLogin }) {
             <div style={{ display: "flex", gap: "24px" }}>
               <div>
                 <strong style={{ fontSize: "18px", color: "var(--primary-400)", display: "block" }}>1,240+</strong>
-                <small style={{ color: "rgba(255,255,255,0.6)" }}>Verified Farmers</small>
+                <small style={{ color: "rgba(255,255,255,0.6)" }}>{t.verifiedFarmersStat}</small>
               </div>
               <div>
                 <strong style={{ fontSize: "18px", color: "var(--primary-400)", display: "block" }}>100%</strong>
-                <small style={{ color: "rgba(255,255,255,0.6)" }}>Escrow Protection</small>
+                <small style={{ color: "rgba(255,255,255,0.6)" }}>{t.escrowProtectionStat}</small>
               </div>
             </div>
           </div>
@@ -1955,48 +1981,48 @@ function AccountScreen({ navigateTo, onLogin }) {
               className={`auth-tab-btn ${!isRegister ? "active" : ""}`}
               onClick={() => setIsRegister(false)}
             >
-              Sign In
+              {t.signInTab}
             </button>
             <button
               type="button"
               className={`auth-tab-btn ${isRegister ? "active" : ""}`}
               onClick={() => setIsRegister(true)}
             >
-              New Registration
+              {t.newRegistrationTab}
             </button>
           </div>
 
           <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "24px", fontWeight: 700, marginBottom: "6px" }}>
-            {isRegister ? "Create Your FarmIQ Profile" : "Sign In to FarmIQ"}
+            {isRegister ? t.registerHeading : t.signInHeading}
           </h2>
           <p style={{ color: "var(--slate-500)", fontSize: "13px", marginBottom: "20px" }}>
-            {isRegister ? "Select your workspace role to begin" : "Use your FarmIQ account ID and password"}
+            {isRegister ? t.registerSubText : t.signInSubText}
           </p>
 
           {isRegister && (
             <div className="form-group">
-              <label>Select User Role</label>
+              <label>{t.selectUserRole}</label>
               <select className="form-control">
-                <option>Farmer (Rent & Track Equipment)</option>
-                <option>Machinery Owner (List & Earn)</option>
-                <option>Delivery Partner (Logistics & Handover)</option>
+                <option>{t.roleOptionFarmer}</option>
+                <option>{t.roleOptionOwner}</option>
+                <option>{t.roleOptionDriver}</option>
               </select>
             </div>
           )}
 
           <div className="form-group">
-            <label>{isRegister ? "Mobile Number" : "Account ID"}</label>
+            <label>{isRegister ? t.mobileNumberLabel : t.accountIdLabel}</label>
             <input
               type="text"
               className="form-control"
               placeholder={isRegister ? "e.g. 98765 43210" : "e.g. FARM-001"}
-              value={isRegister ? accountId : accountId}
+              value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
             />
           </div>
 
           <div className="form-group">
-            <label>{isRegister ? "Full Name" : "OTP / Password"}</label>
+            <label>{isRegister ? t.fullNameLabel : t.passwordLabel}</label>
             <input
               type={isRegister ? "text" : "password"}
               className="form-control"
@@ -2007,14 +2033,14 @@ function AccountScreen({ navigateTo, onLogin }) {
           </div>
 
           <button className="btn-primary btn-full btn-lg" style={{ marginTop: "12px" }} disabled={isSigningIn}>
-            <span>{isSigningIn ? "Signing in..." : "Continue to Workspace"}</span>
+            <span>{isSigningIn ? "..." : t.continueToWorkspaceBtn}</span>
             <ArrowRight size={16} />
           </button>
 
           {authError && <p style={{ color: "#b42318", fontSize: "12px", marginTop: "12px" }}>{authError}</p>}
 
           <p style={{ textAlign: "center", fontSize: "11px", color: "var(--slate-400)", marginTop: "16px" }}>
-            By continuing, you agree to FarmIQ Terms of Service & Safety Escrow Rules.
+            {t.termsNoticeText}
           </p>
         </form>
       </div>
