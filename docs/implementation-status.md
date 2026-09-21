@@ -1,0 +1,56 @@
+# FarmIQ implementation status — 21 September 2026
+
+This is a substantial working MVP upgrade, not completion of every production capability in the earlier assessment. The previous numerical maturity estimates were informal; this checklist replaces them with testable scope.
+
+## Implemented
+
+| Area | Delivered |
+| --- | --- |
+| Structure | One frontend, npm workspaces, one lockfile, one-command development, production build, migration files, CI and container recipe |
+| Identity | Registration, password login, server-authoritative roles, expiring JWTs, logout/revocation, profile editing, addresses, account closure, private document upload |
+| Marketplace | Verified active listings, owner verification filtering, search, category/price/distance filters, date availability, machine details/gallery, comparison, favourites, owner profiles, reviews, map |
+| Reservations | Owner acceptance/rejection, 30-minute payment hold, server quotation, hourly/daily pricing, operator qualification/overlap check, signed-in request idempotency, serializable booking transactions |
+| Lifecycle | Role-specific transitions, booking lists/details, timelines, unpaid rescheduling, cancellation quote and sandbox refund record, balance payment, return/completion, history |
+| Owner tools | Create/edit/deactivate listings, maintenance state, delivery radius, calendar blackout periods, service records, calculated earnings and activity |
+| Delivery | Verified/on-duty eligibility, private job data, transactional job claim, driver GPS while page is open, buffered latest GPS fix, freshness/geofence checks, handover codes and map links |
+| Trust | Mandatory photographed pickup/delivery/return inspections, recorded agreement version/time, completed-rental reviews with separate condition/reliability/handling scores, private evidence access |
+| Administration | User/listing/document verification, suspension/reactivation, tickets and resolution, review moderation, audit log, commission setting, operator creation, tutorial publishing, driver reassignment, same-owner replacement, consent-recorded assisted booking |
+| Dispatch | Optional nearest-driver allocation for paid rentals using verified/on-duty status, a fresh five-minute GPS fix, configurable radius/start horizon, active-job exclusion, serializable assignment and manual administrator run |
+| Payments | Explicit sandbox mode, advance/balance ledger, idempotency, sandbox cancellation fees/refunds, receipt download, frozen commission calculation, owner settlement ledger/CSV and idempotent simulated payout approval; no false escrow claim |
+| Notifications | In-app delivery plus a durable opt-in SMS outbox, provider status receipts, bounded retry of definite rate limits and manual-review handling for uncertain outcomes |
+| Help | Persisted chat history, guided fallback, optional model integration, support tickets, real video/audio elements when media is supplied, written guide downloads, read-aloud and self-reported learning completion |
+| Rural access | PWA manifest/service worker, app shell and public catalogue caching, per-account saved booking drafts, low-data catalogue, browser voice input, mobile bottom navigation |
+| Practical extras | Task/acreage recommendations, fuel/rental estimates, weather forecast adapter, group expressions of interest, demand counts, official mechanization-assistance link |
+| Verification | Unit tests, security/signature tests, real PostgreSQL four-role lifecycle and concurrency test, desktop/mobile browser checks, accessibility checks |
+
+## Implemented integrations that need configuration and external validation
+
+- Razorpay orders and signed captured/failed webhooks: needs provider keys, an HTTPS callback endpoint and end-to-end provider test transactions. Real escrow, payouts and provider refunds are not implied.
+- Twilio OTP login/reset and signed SMS commands: needs a sender/account and local messaging registration/consent arrangements. No provider traffic was sent.
+- IVR booking-status and assisted-callback menu: needs a telephone number, callback staff and live voice testing. Full autonomous voice booking and regional narration remain to be built.
+- Gemini assistance: requires an explicitly configured, available model and key. Fallback guidance works without AI. No generated training media is shipped.
+- Weather: Open-Meteo adapter is implemented, but production availability and service plan should be validated. The forecast is advisory, not an equipment-safety clearance.
+- Learning catalogue: administrators must supply reviewed manufacturer/agronomist content, real media URLs and captions. There is no fabricated certification badge or substitute video.
+
+## Still outstanding — not represented as complete
+
+1. Full Tamil/Hindi translation of every new screen, all validation messages and date/currency text. Navigation, catalogue introduction and assistant language selection are localized; most operational forms remain English.
+2. Road-route ETA/optimization, background GPS when the browser is closed, driver shift calendars and automatic standby fleet guarantees. Straight-line nearest-driver allocation, job acceptance/manual reassignment and same-owner replacement are implemented.
+3. Full multi-farm group reservations, per-member agreements/payment splitting and sequential field delivery. Current groups coordinate interest/acreage only.
+4. Production messaging consent/compliance review, sender registration and live carrier validation. The durable outbox, signed delivery receipts, safe retry rules, in-app notifications and SMS-request/OTP channels are implemented but need configured Twilio credentials.
+5. Production refunds and owner payout execution, deposits, tax/GST rules/invoices and licensed escrow arrangements. A settlement ledger, safe CSV export and explicitly simulated sandbox payout workflow are implemented.
+6. Insurance/damage-coverage partnerships, claims adjudication, premium subscriptions/priority booking and service-level guarantees.
+7. Dynamic regional/demand pricing, configurable categories/service areas, predictive seasonal demand heatmaps, income forecasting and equipment/IoT telemetry.
+8. Automated offline submission queue for bookings and inspections. Drafts and public pages are cached; financially significant actions require explicit online submission.
+9. Automated machine safety certification, generated regional tutorial media, operator self-service accounts and operator availability calendars beyond booking conflict checks.
+10. Complete bidirectional reputation including farmer conduct, granular inspector approval/signatures and transport-return route management.
+11. Production monitoring/alerts, shared rate limiting, private cloud storage, malware scanning, load tests, backup automation, retention/purge jobs, independent security review and public deployment.
+12. Final legal/privacy/cancellation wording, insurance and payments compliance, support staffing and business-provider contracts. The repository includes only factual prototype policy notes.
+
+## Database and verification notes
+
+Final local checks: production frontend build passed; all 8 backend suites passed, including real PostgreSQL lifecycle/concurrency, automatic dispatch, payout idempotency and uncertain-message handling; all 6 desktop/mobile browser checks passed, including the operations page, dashboard WCAG A/AA automated checks and logout. All four migrations deployed successfully to a fresh test database. The full npm dependency audit reported zero known vulnerabilities. Browser coverage is a smoke suite, not exhaustive testing of every administrative form or external provider.
+
+No existing Supabase data was migrated. The schema and migrations were exercised against a disposable local PostgreSQL 16 container named `farmiq-review-db`, bound to localhost port 55432. Existing legacy payment data is not silently converted to real-money records. See `deployment.md` before upgrading a real database.
+
+The removed duplicate frontend and old destructive CLI scripts are recoverable from Git history. No user data was deleted. Old static dashboards, auto-login/payment simulations and unsafe hard-coded AI pesticide advice were removed from the active source tree.

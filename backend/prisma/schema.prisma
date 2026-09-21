@@ -29,6 +29,12 @@ enum MachineryStatus {
 }
 
 enum BookingStatus {
+  REQUESTED
+  PAID
+  PICKUP_INSPECTION
+  RETURN_INSPECTION
+  DISPUTED
+  REJECTED
   PENDING_PAYMENT
   ASSIGNED
   IN_TRANSIT
@@ -57,6 +63,15 @@ model User {
   latitude           Float?
   longitude          Float?
   active             Boolean            @default(true)
+  onDuty             Boolean            @default(false)
+  sessionVersion     Int                @default(0)
+  locationUpdatedAt  DateTime?
+  preferences        Json               @default("{}")
+  addresses          Address[]
+  documents          Document[]
+  notifications      Notification[]
+  favourites         Favourite[]
+  tutorialProgress   TutorialProgress[]
   machinery          Machinery[]
   farmerBookings     Booking[]          @relation("FarmerBookings")
   driverBookings     Booking[]          @relation("DriverBookings")
@@ -83,6 +98,15 @@ model Machinery {
   latitude          Float?
   longitude         Float?
   location          String?
+  verificationStatus VerificationStatus @default(PENDING)
+  media             Json              @default("[]")
+  deliveryRadiusKm  Float             @default(30)
+  deposit           Decimal           @default(0) @db.Decimal(10, 2)
+  fuelLitresPerHour Float              @default(0)
+  acresPerHour      Float              @default(1)
+  availability      Availability[]
+  serviceRecords    ServiceRecord[]
+  favourites        Favourite[]
   ownerId           String          @db.Uuid @map("owner_id")
   owner             User            @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   bookings          Booking[]
@@ -96,7 +120,21 @@ model Machinery {
 
 model Booking {
   id            String        @id @default(uuid()) @db.Uuid
-  status        BookingStatus @default(PENDING_PAYMENT)
+  status        BookingStatus @default(REQUESTED)
+  endsAt        DateTime?
+  requestKey    String?       @unique
+  holdExpiresAt DateTime?
+  quote         Json         @default("{}")
+  agreementVersion String    @default("2026-09-v1")
+  agreementAcceptedAt DateTime?
+  handoverCodeHash String?
+  cancellationFee Decimal    @default(0) @db.Decimal(10, 2)
+  operatorId    String?
+  history       BookingEvent[]
+  inspections   Inspection[]
+  reviews       Review[]
+  tickets       SupportTicket[]
+  transactions  Transaction[]
   scheduledAt   DateTime      @map("scheduled_at")
   durationHours Int           @map("duration_hours")
   totalAmount   Decimal       @db.Decimal(10, 2) @map("total_amount")
@@ -135,4 +173,253 @@ model Payment {
   updatedAt         DateTime      @updatedAt @map("updated_at")
 
   @@map("payments")
+}
+
+model Address {
+  id String @id @default(uuid())
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id])
+  label String
+  address String
+  latitude Float
+  longitude Float
+  @@index([userId])
+}
+
+model Document {
+  id String @id @default(uuid())
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id])
+  kind String
+  filename String
+  storageKey String
+  status VerificationStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  @@index([userId])
+}
+
+model Availability {
+  id String @id @default(uuid())
+  machineryId String
+  machinery Machinery @relation(fields: [machineryId], references: [id])
+  startsAt DateTime
+  endsAt DateTime
+  reason String
+  @@index([machineryId, startsAt])
+}
+
+model ServiceRecord {
+  id String @id @default(uuid())
+  machineryId String
+  machinery Machinery @relation(fields: [machineryId], references: [id])
+  performedAt DateTime
+  notes String
+  nextServiceAt DateTime?
+}
+
+model BookingEvent {
+  id String @id @default(uuid())
+  bookingId String @db.Uuid
+  booking Booking @relation(fields: [bookingId], references: [id])
+  actorId String
+  fromStatus String?
+  toStatus String
+  note String
+  createdAt DateTime @default(now())
+  @@index([bookingId, createdAt])
+}
+
+model Inspection {
+  id String @id @default(uuid())
+  bookingId String @db.Uuid
+  booking Booking @relation(fields: [bookingId], references: [id])
+  stage String
+  actorId String
+  notes String
+  checklist Json
+  media Json @default("[]")
+  createdAt DateTime @default(now())
+  @@unique([bookingId, stage])
+}
+
+model Review {
+  id String @id @default(uuid())
+  bookingId String @db.Uuid
+  booking Booking @relation(fields: [bookingId], references: [id])
+  reviewerId String
+  rating Int
+  condition Int
+  reliability Int
+  handling Int
+  comment String
+  hidden Boolean @default(false)
+  createdAt DateTime @default(now())
+  @@unique([bookingId, reviewerId])
+}
+
+model SupportTicket {
+  id String @id @default(uuid())
+  userId String
+  bookingId String? @db.Uuid
+  booking Booking? @relation(fields: [bookingId], references: [id])
+  category String
+  message String
+  status String @default("OPEN")
+  resolution String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([userId, status])
+}
+
+model Transaction {
+  id String @id @default(uuid())
+  bookingId String @db.Uuid
+  booking Booking @relation(fields: [bookingId], references: [id])
+  kind String
+  amount Decimal @db.Decimal(10, 2)
+  status PaymentStatus @default(PENDING)
+  provider String
+  providerReference String? @unique
+  idempotencyKey String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([bookingId, kind])
+}
+
+model Notification {
+  id String @id @default(uuid())
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id])
+  message String
+  bookingId String?
+  readAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId, readAt])
+}
+
+model MessageOutbox {
+  id String @id @default(uuid())
+  notificationId String @unique
+  userId String
+  body String
+  status String @default("PENDING")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  providerReference String? @unique
+  error String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, nextAttemptAt])
+}
+
+model Payout {
+  id String @id @default(uuid())
+  bookingId String @unique
+  ownerId String
+  amount Decimal @db.Decimal(10, 2)
+  status String @default("REQUESTED")
+  provider String @default("sandbox")
+  reference String?
+  note String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([ownerId, status])
+}
+
+model AuditLog {
+  id String @id @default(uuid())
+  actorId String
+  action String
+  targetId String
+  detail Json @default("{}")
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+}
+
+model Favourite {
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id])
+  machineryId String
+  machinery Machinery @relation(fields: [machineryId], references: [id])
+  @@id([userId, machineryId])
+}
+
+model Operator {
+  id String @id @default(uuid())
+  name String
+  phone String
+  skills String[]
+  certification String
+  verificationStatus VerificationStatus @default(PENDING)
+  hourlyRate Decimal @db.Decimal(10, 2)
+  active Boolean @default(true)
+}
+
+model Tutorial {
+  id String @id @default(uuid())
+  title String
+  category String
+  language String
+  summary String
+  steps Json
+  videoUrl String?
+  audioUrl String?
+  captionsUrl String?
+  sourceUrl String?
+  published Boolean @default(false)
+  progress TutorialProgress[]
+}
+
+model TutorialProgress {
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id])
+  tutorialId String
+  tutorial Tutorial @relation(fields: [tutorialId], references: [id])
+  completedSteps Int
+  completedAt DateTime?
+  @@id([userId, tutorialId])
+}
+
+model GroupRequest {
+  id String @id @default(uuid())
+  organiserId String
+  title String
+  village String
+  category String
+  scheduledAt DateTime
+  status String @default("OPEN")
+  members GroupMember[]
+  createdAt DateTime @default(now())
+}
+
+model GroupMember {
+  groupId String
+  group GroupRequest @relation(fields: [groupId], references: [id])
+  userId String
+  acres Float
+  @@id([groupId, userId])
+}
+
+model Setting {
+  key String @id
+  value Json
+}
+
+model AuthChallenge {
+  id String @id @default(uuid())
+  phone String
+  purpose String
+  codeHash String
+  attempts Int @default(0)
+  expiresAt DateTime
+  usedAt DateTime?
+}
+
+model ChatMessage {
+  id String @id @default(uuid())
+  userId String
+  role String
+  text String
+  createdAt DateTime @default(now())
+  @@index([userId, createdAt])
 }

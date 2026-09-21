@@ -1,55 +1,80 @@
 # FarmIQ
 
-FarmIQ is a machinery-rental, logistics, and training platform for small-scale farmers. The project uses a React/Vite frontend and an Express API backed by Supabase PostgreSQL through Prisma.
+A React/Vite and Express/PostgreSQL machinery-rental application with farmer, owner, delivery-partner and administrator workflows. The active frontend lives in `frontend/`; the root is an npm workspace. See [implementation status](docs/implementation-status.md) for the exact implemented and outstanding scope.
 
-## Technology
+## Local setup
 
-| Layer | Technology |
-| --- | --- |
-| Frontend | React + Vite, React Leaflet |
-| Backend | Node.js + Express |
-| Database | Supabase PostgreSQL + Prisma |
-| Demo authentication | Account ID/password, bcrypt hashes, JWT sessions |
+Use Node.js 22+ and PostgreSQL 16+. From the repository root:
 
-## Supabase setup
-
-1. Create or open a Supabase project.
-2. In the Supabase dashboard, open **Project Settings -> Database -> Connection string**.
-3. Copy [backend/.env.example](C:/Users/victo/OneDrive/Desktop/John_Projects/FarmIQ/backend/.env.example) to `backend/.env`.
-4. Put the transaction-pooler URL in `DATABASE_URL` and the direct/session URL in `DIRECT_URL`.
-5. Replace `JWT_SECRET` with a long random string.
-6. From the `backend` directory, run:
-
-```bash
+```sh
 npm install
 npm run db:generate
-npm run db:push
-npm run db:seed
+```
+
+Create `backend/.env` using `backend/.env.example`. Set `DATABASE_URL`, `DIRECT_URL`, a random `JWT_SECRET`, and the frontend origin. Use a **separate development database** for demos and tests. No database credentials belong in frontend environment variables.
+
+For a new, empty database:
+
+```sh
+npm run db:migrate -w farmiq-backend
+```
+
+For an existing database created with the old schema, follow [deployment and migration instructions](docs/deployment.md) before applying migrations. Do not reset it or accept data loss.
+
+Optional demonstration data:
+
+```sh
+ALLOW_DEMO_SEED=true npm run db:seed -w farmiq-backend
+```
+
+The seed preserves existing records and refuses to run in production. Demo account IDs: `DEMO-FARMER`, `DEMO-OWNER`, `DEMO-DRIVER`, `DEMO-ADMIN`. Shared development password: `FarmIQ-demo-2026`. Never use these accounts in a public deployment.
+
+```sh
 npm run dev
 ```
 
-The API runs at `http://localhost:3000`.
+Open the Vite URL, normally `http://localhost:5173`. `/api` is proxied to port 3000. The frontend uses `frontend/.env` if a separate API origin is needed. Root `.env` is not a frontend configuration file.
 
-## Frontend setup
+## Working rental flow
 
-From the project root:
+1. Farmer selects a verified machine, date, duration, address and optional verified operator, reviews the server quote, and accepts the rental agreement.
+2. Owner accepts the request. The payment reservation lasts 30 minutes.
+3. Farmer pays the 50% advance. Sandbox mode records a simulated transaction without moving money.
+4. A verified on-duty driver accepts the available job; only then are farm and contact details disclosed.
+5. Driver uploads pickup inspection photos, starts delivery and shares GPS while the delivery page is open.
+6. Farmer generates a handover code. Driver must provide it with a recent GPS fix within 500 metres of the farm.
+7. Farmer records the delivery inspection, pays the balance and starts the rental.
+8. Farmer requests return inspection; the owner records the return and completes the rental.
+9. Farmer reviews the completed rental. All participants can see the timeline, receipts and permitted evidence.
 
-```bash
-npm install
-npm run dev
+## Other implemented features
+
+- optional fresh-GPS nearest-driver allocation and an administrator dispatch console
+- durable opted-in SMS notification outbox with signed delivery-status handling
+- settlement ledger, CSV export and clearly labelled sandbox payout simulation
+
+- Account registration, password login, session revocation, profiles, farm addresses and private document upload.
+- Server-enforced authorization, validated inputs, rate limiting, security headers and action auditing.
+- Search, date availability, distance filtering, map view, favourites, comparison and machine details.
+- Owner listing management, blackout periods and service records; administrator verification and suspension.
+- Tickets, review moderation, in-app notifications, operator records, tutorial publishing and progress.
+- Server-calculated daily/hourly quotations, commission estimates, sandbox cancellation/refund ledger and downloadable receipts.
+- Field-task recommendations, acreage/fuel estimates, weather planning, village group expressions of interest and government-resource link.
+- Installable app shell, public catalogue caching, private booking drafts, low-data preference, browser voice input/read-aloud, and English/Tamil/Hindi navigation.
+- Optional Razorpay order/webhook integration, Twilio OTP and signed SMS/voice endpoints, and configurable Gemini assistance. These need credentials and provider validation before activation.
+
+## Verification
+
+```sh
+npm run build
+npm test
+TEST_DATABASE_URL=postgresql://USER:PASSWORD@127.0.0.1:5432/farmiq_test npm test
+npx playwright install chromium
+npm run test:e2e
 ```
 
-The frontend normally runs at `http://localhost:5173`. It uses `VITE_API_URL` from the root `.env` when provided and otherwise connects to `http://localhost:3000`.
+Integration tests only accept a localhost database whose name includes `test`. Apply migrations to it first. They create uniquely named fixtures and never delete existing data. Browser tests with `E2E_WITH_API=true` additionally use the demo accounts against a running local API. The CI workflow runs migrations, compilation, unit/integration checks and browser smoke tests.
 
-## Demo data
+## Important boundaries
 
-The seed creates:
-
-- 6 farmer accounts
-- 6 driver accounts
-- 6 machinery-owner/buyer accounts
-- 6 machinery listings with displayable image URLs
-
-See [backend/DEMO_ACCOUNTS.md](C:/Users/victo/OneDrive/Desktop/John_Projects/FarmIQ/backend/DEMO_ACCOUNTS.md) for the development login IDs and passwords.
-
-The payment route is a project demonstration: it records a simulated paid advance in PostgreSQL but does not charge real money.
+Sandbox money is simulated. No bank escrow, insurance, guaranteed replacement, certified AI-generated training or real payout is represented as active. Payment settlement and tax treatment require business and provider review. Phone GPS only runs while the page is open. Reviewed tutorial media must be supplied by administrators. Advanced group settlement, automatic fleet dispatch, full localization and several production integrations remain outstanding; consult the implementation-status document.

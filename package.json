@@ -1,13 +1,22 @@
 {
-  "name": "farmiq-frontend",
+  "name": "farmiq",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "concurrently -k -n api,web \"npm run dev -w farmiq-backend\" \"npm run dev -w farmiq-frontend\"",
+    "dev:web": "npm run dev -w farmiq-frontend",
+    "build": "npm run build -w farmiq-frontend",
+    "preview": "npm run preview -w farmiq-frontend",
+    "test": "npm run test -w farmiq-backend",
+    "test:e2e": "playwright test",
+    "db:generate": "npm run db:generate -w farmiq-backend",
+    "check": "npm run build && npm test"
   },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "dependencies": {
     "leaflet": "^1.9.4",
     "lucide-react": "^1.33.0",
@@ -16,6 +25,10 @@
     "react-leaflet": "^5.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.51.1",
+    "concurrently": "^9.1.2",
+    "prettier": "^3.9.8",
     "vite": "^6.0.0"
   }
 }
