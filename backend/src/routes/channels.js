@@ -4,6 +4,7 @@ const router = express.Router();
 const { prisma } = require('../config');
 const { fail, schemas } = require('../domain');
 const booking = require('../services/booking');
+const i18n = require('../i18n');
 const xml = (value) =>
   String(value).replace(
     /[<>&"']/g,
@@ -51,7 +52,8 @@ router.post('/channels/status/:id', async (req, res) => {
   res.sendStatus(204);
 });
 router.post('/channels/sms', async (req, res) => {
-  let reply = 'Register your mobile number with FarmIQ before using SMS bookings.';
+  const lang = req.channelUser?.language || 'en';
+  let reply = i18n.text('register', lang);
   const u = req.channelUser,
     body = String(req.body.Body || '').trim();
   if (u) {
@@ -62,15 +64,13 @@ router.post('/channels/sms', async (req, res) => {
         include: { machinery: true },
       });
       reply = b
-        ? `${b.machinery.name}: ${b.status.replaceAll('_', ' ')}. Starts ${b.scheduledAt.toISOString()}. Booking ${b.id}.`
-        : 'You have no bookings yet.';
+        ? `${b.machinery.name}: ${i18n.status(b.status, lang)}. ${i18n.text('starts', lang, { date: b.scheduledAt.toLocaleString(`${lang}-IN`, { timeZone: 'Asia/Kolkata' }), id: b.id })}`
+        : i18n.text('noBookings', lang);
     } else if (/^BOOK /i.test(body) && u.role === 'FARMER') {
       const match = body.match(
         /^BOOK\s+(\S+)\s+(\d{4}-\d{2}-\d{2})\s+(\d+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(.+)\s+AGREE$/i,
       );
-      if (!match)
-        reply =
-          'To request: BOOK machine-id YYYY-MM-DD hours latitude longitude farm-address AGREE. Starts 08:00 India time. AGREE accepts the rental terms: owner approval, 50% advance, inspection, and 10% late cancellation fee. No payment is taken by SMS.';
+      if (!match) reply = i18n.text('bookHelp', lang);
       else {
         const hex = crypto.createHash('sha256').update(String(req.body.MessageSid)).digest('hex');
         const requestKey = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
@@ -88,11 +88,10 @@ router.post('/channels/sms', async (req, res) => {
               requestKey,
             }),
           );
-          reply = `Request ${b.id} sent to owner. Total INR ${b.totalAmount}; advance INR ${b.advanceAmount} after approval. Sign in to pay securely.`;
+          reply = i18n.text('requested', lang, { id: b.id, total: b.totalAmount, advance: b.advanceAmount });
         } catch (e) {
           if (e.status && e.status < 500) reply = e.message;
-          else if (e.name === 'ZodError')
-            reply = 'Check the date, hours, coordinates and address in your request.';
+          else if (e.name === 'ZodError') reply = i18n.text('badBooking', lang);
           else throw e;
         }
       }
@@ -108,25 +107,28 @@ router.post('/channels/sms', async (req, res) => {
           message: body.slice(0, 3000) || 'SMS assistance requested',
         },
       });
-      reply =
-        'Support request recorded. Your operator can review it in FarmIQ. This is not an emergency service.';
-    } else
-      reply =
-        'FarmIQ SMS: STATUS for your latest booking; HELP followed by a question for support; BOOK for booking instructions. Payments require the secure app.';
+      reply = i18n.text('support', lang);
+    } else reply = i18n.text('smsHelp', lang);
   }
   res.type('text/xml').send(`<Response><Message>${xml(reply)}</Message></Response>`);
 });
 router.post('/channels/voice', async (req, res) => {
   const u = req.channelUser;
+  const lang = u?.language || 'en';
+  const say = (value) => `<Say language="${i18n.voiceLanguage(lang)}">${xml(value)}</Say>`;
   let body;
-  if (!u) body = '<Say>Please register this mobile number with Farm I Q first.</Say>';
+  if (!u) body = say(i18n.text('voiceRegister', lang));
   else if (req.body.Digits === '1') {
     const b = await prisma.booking.findFirst({
       where: require('../domain').scope(u),
       orderBy: { createdAt: 'desc' },
       include: { machinery: true },
     });
-    body = `<Say>${xml(b ? `${b.machinery.name}. Your booking status is ${b.status.replaceAll('_', ' ')}.` : 'You have no bookings.')}</Say>`;
+    body = say(
+      b
+        ? `${b.machinery.name}. ${i18n.text('bookingStatus', lang, { status: i18n.status(b.status, lang) })}`
+        : i18n.text('voiceNoBookings', lang),
+    );
   } else if (req.body.Digits === '2') {
     const id = `voice-${String(req.body.CallSid).slice(0, 80)}`;
     await prisma.supportTicket.upsert({
@@ -140,10 +142,9 @@ router.post('/channels/voice', async (req, res) => {
           'Phone-assisted booking callback requested. Contact the farmer and record consent before booking.',
       },
     });
-    body = '<Say>Your assisted booking callback request is recorded. An administrator will review it.</Say>';
+    body = say(i18n.text('callback', lang));
   } else
-    body =
-      '<Gather numDigits="1" action="/api/channels/voice" method="POST"><Say>Welcome to Farm I Q. Press 1 for your latest booking status. Press 2 to request assisted booking support.</Say></Gather>';
+    body = `<Gather numDigits="1" action="/api/channels/voice" method="POST">${say(i18n.text('menu', lang))}</Gather>`;
   res.type('text/xml').send(`<Response>${body}</Response>`);
 });
 module.exports = { router, signatureValid };

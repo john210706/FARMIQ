@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { api, money, when } from '../lib/api';
 import { useData, State, Panel, Field, Action, Form, Button, Badge, Empty } from '../ui';
+import { localeFor } from '../i18n';
 export default function Community({ user, navigate }) {
   const [recommendations, setRecommendations] = useState(null),
     [weather, setWeather] = useState(null),
@@ -94,7 +95,7 @@ export default function Community({ user, navigate }) {
                 {weather.days.map((d) => (
                   <div key={d.date} className={d.caution ? 'weather-day caution' : 'weather-day'}>
                     <strong>
-                      {new Date(d.date + 'T12:00:00').toLocaleDateString(undefined, {
+                      {new Date(d.date + 'T12:00:00').toLocaleDateString(localeFor(), {
                         weekday: 'short',
                         day: 'numeric',
                       })}

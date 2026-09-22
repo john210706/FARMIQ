@@ -2,6 +2,7 @@ import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { api, money, when, upload, pay, download, openDocument } from '../lib/api';
 import { useData, State, Panel, Button, Action, Form, Field, Badge, Empty } from '../ui';
 import { Quote } from './Catalog';
+import { tr } from '../i18n';
 const Map = lazy(() => import('./Map'));
 export default function Bookings({ navigate, user }) {
   const [version, setVersion] = useState(0),
@@ -160,7 +161,7 @@ export function BookingDetail({ id, user, navigate }) {
           <ol className="stepper">
             {steps.map((s, i) => (
               <li key={s} className={steps.indexOf(b.status) >= i ? 'done' : ''}>
-                {s.replaceAll('_', ' ')}
+                {tr(s).replaceAll('_', ' ')}
               </li>
             ))}
           </ol>
@@ -302,8 +303,8 @@ export function BookingDetail({ id, user, navigate }) {
                 <ol className="timeline">
                   {b.history.map((h) => (
                     <li key={h.id}>
-                      <strong>{h.toStatus.replaceAll('_', ' ')}</strong>
-                      <p>{h.note}</p>
+                      <strong>{tr(h.toStatus).replaceAll('_', ' ')}</strong>
+                      <p>{tr(h.note)}</p>
                       <small>{when(h.createdAt)}</small>
                     </li>
                   ))}

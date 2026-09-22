@@ -706,7 +706,7 @@ router.post('/admin/operators', admin, async (req, res) => {
   );
 });
 router.get('/admin/tutorials', admin, async (req, res) => res.json(await prisma.tutorial.findMany()));
-const tutorialSchema = z.object({
+const tutorialFields = z.object({
   title: text(200),
   category: text(40),
   language: z.enum(['en', 'ta', 'hi']),
@@ -718,6 +718,16 @@ const tutorialSchema = z.object({
   sourceUrl: url,
   published: z.boolean(),
 });
+const captionCheck = (value, context) => {
+  if (value.videoUrl && !value.captionsUrl)
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['captionsUrl'],
+      message: 'Captions are required for published video tutorials',
+    });
+};
+const tutorialSchema = tutorialFields.superRefine(captionCheck);
+const tutorialPatchSchema = tutorialFields.partial().superRefine(captionCheck);
 router.post('/admin/tutorials', admin, async (req, res) =>
   res.status(201).json(await prisma.tutorial.create({ data: tutorialSchema.parse(req.body) })),
 );
@@ -725,7 +735,7 @@ router.patch('/admin/tutorials/:id', admin, async (req, res) =>
   res.json(
     await prisma.tutorial.update({
       where: { id: req.params.id },
-      data: tutorialSchema.partial().parse(req.body),
+      data: tutorialPatchSchema.parse(req.body),
     }),
   ),
 );

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from './lib/api';
+import { tr } from './i18n';
 export function useData(path, version = 0) {
   const [data, setData] = useState(null),
     [error, setError] = useState('');
@@ -21,13 +22,13 @@ export function State({ data, error, children }) {
   if (error)
     return (
       <p className="notice error" role="alert">
-        {error}
+        {tr(error)}
       </p>
     );
   if (data === null)
     return (
       <div className="skeleton" aria-label="Loading" role="status">
-        Loading…
+        {tr('Loading…')}
       </div>
     );
   return children;
@@ -59,7 +60,7 @@ export function Panel({ title, children, actions }) {
   );
 }
 export function Badge({ children }) {
-  return <span className="pill">{String(children).replaceAll('_', ' ')}</span>;
+  return <span className="pill">{tr(String(children)).replaceAll('_', ' ')}</span>;
 }
 export function Empty({ children }) {
   return <div className="empty">{children}</div>;
@@ -85,11 +86,11 @@ export function Action({ run, children, done, secondary = false, disabled = fals
           }
         }}
       >
-        {busy ? 'Working…' : children}
+        {busy ? tr('Working…') : children}
       </Button>
       {error && (
         <span className="inline-error" role="alert">
-          {error}
+          {tr(error)}
         </span>
       )}
     </>
@@ -101,6 +102,20 @@ export function Form({ onSubmit, children, label = 'Save', secondary = false }) 
   return (
     <form
       className="form"
+      onInvalid={(e) => {
+        const validity = e.target.validity;
+        const message = validity.valueMissing
+          ? 'Please complete this field.'
+          : validity.patternMismatch
+            ? 'Please match the requested format.'
+            : validity.tooShort
+              ? 'The value is too short.'
+              : validity.rangeOverflow || validity.rangeUnderflow
+                ? 'The value is outside the allowed range.'
+                : 'Please enter a valid value.';
+        e.target.setCustomValidity(tr(message));
+      }}
+      onInput={(e) => e.target.setCustomValidity?.('')}
       onSubmit={async (e) => {
         e.preventDefault();
         const form = e.currentTarget;
@@ -118,11 +133,11 @@ export function Form({ onSubmit, children, label = 'Save', secondary = false }) 
       {children}
       {error && (
         <p role="alert" className="notice error">
-          {error}
+          {tr(error)}
         </p>
       )}
       <Button type="submit" disabled={busy} secondary={secondary}>
-        {busy ? 'Saving…' : label}
+        {busy ? tr('Saving…') : label}
       </Button>
     </form>
   );

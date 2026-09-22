@@ -1,4 +1,5 @@
 export const API = import.meta.env.VITE_API_URL || '';
+import { getLanguage, localeFor, tr, trError } from '../i18n';
 export function getSession() {
   try {
     return JSON.parse(sessionStorage.getItem('farmiqSession') || 'null');
@@ -19,6 +20,7 @@ export async function api(path, options = {}) {
     headers: {
       ...(form ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'Accept-Language': getLanguage(),
       ...options.headers,
     },
     body: options.body === undefined ? undefined : form ? options.body : JSON.stringify(options.body),
@@ -29,15 +31,15 @@ export async function api(path, options = {}) {
     window.dispatchEvent(new Event('session-expired'));
   }
   if (!response.ok)
-    throw Object.assign(new Error(data.error || 'Request failed'), { status: response.status });
+    throw Object.assign(new Error(trError(data.error || 'Request failed')), { status: response.status });
   return data;
 }
 export const money = (value) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(
+  new Intl.NumberFormat(localeFor(), { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(
     Number(value || 0),
   );
 export const when = (value) =>
-  new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  new Date(value).toLocaleString(localeFor(), { dateStyle: 'medium', timeStyle: 'short' });
 export function download(name, text, type = 'text/plain') {
   const url = URL.createObjectURL(new Blob([text], { type }));
   const a = document.createElement('a');
@@ -50,7 +52,7 @@ export async function openDocument(id) {
   const r = await fetch(`${API}/api/documents/${id}`, {
     headers: { Authorization: `Bearer ${getSession()?.token}` },
   });
-  if (!r.ok) throw new Error('File unavailable');
+  if (!r.ok) throw new Error(tr('File unavailable'));
   const url = URL.createObjectURL(await r.blob());
   const a = document.createElement('a');
   a.href = url;
@@ -75,7 +77,7 @@ export async function pay(bookingId, kind) {
       const s = document.createElement('script');
       s.src = 'https://checkout.razorpay.com/v1/checkout.js';
       s.onload = resolve;
-      s.onerror = () => reject(new Error('Payment checkout could not load'));
+      s.onerror = () => reject(new Error(tr('Payment checkout could not load')));
       document.head.append(s);
     });
   return new Promise((resolve, reject) =>
@@ -85,10 +87,10 @@ export async function pay(bookingId, kind) {
       amount: data.amount,
       currency: 'INR',
       name: 'FarmIQ',
-      description: kind === 'ADVANCE' ? '50% booking advance' : 'Booking balance',
+      description: kind === 'ADVANCE' ? tr('50% booking advance') : tr('Booking balance'),
       handler: () =>
-        resolve({ message: 'Payment submitted. Confirmation appears after the provider webhook.' }),
-      modal: { ondismiss: () => reject(new Error('Payment window closed; you can retry')) },
+        resolve({ message: tr('Payment submitted. Confirmation appears after the provider webhook.') }),
+      modal: { ondismiss: () => reject(new Error(tr('Payment window closed; you can retry'))) },
     }).open(),
   );
 }

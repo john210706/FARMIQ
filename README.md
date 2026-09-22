@@ -60,7 +60,7 @@ Open the Vite URL, normally `http://localhost:5173`. `/api` is proxied to port 3
 - Tickets, review moderation, in-app notifications, operator records, tutorial publishing and progress.
 - Server-calculated daily/hourly quotations, commission estimates, sandbox cancellation/refund ledger and downloadable receipts.
 - Field-task recommendations, acreage/fuel estimates, weather planning, village group expressions of interest and government-resource link.
-- Installable app shell, public catalogue caching, private booking drafts, low-data preference, browser voice input/read-aloud, and English/Tamil/Hindi navigation.
+- Installable app shell, public catalogue caching, private booking drafts, low-data preference, and a complete English/Tamil/Hindi interface with localized validation, dates, INR currency, browser voice input/read-aloud, SMS/IVR prompts and tutorial captions.
 - Optional Razorpay order/webhook integration, Twilio OTP and signed SMS/voice endpoints, and configurable Gemini assistance. These need credentials and provider validation before activation.
 
 ## Verification
@@ -77,4 +77,4 @@ Integration tests only accept a localhost database whose name includes `test`. A
 
 ## Important boundaries
 
-Sandbox money is simulated. No bank escrow, insurance, guaranteed replacement, certified AI-generated training or real payout is represented as active. Payment settlement and tax treatment require business and provider review. Phone GPS only runs while the page is open. Reviewed tutorial media must be supplied by administrators. Advanced group settlement, automatic fleet dispatch, full localization and several production integrations remain outstanding; consult the implementation-status document.
+Sandbox money is simulated. No bank escrow, insurance, guaranteed replacement, certified AI-generated training or real payout is represented as active. Payment settlement and tax treatment require business and provider review. Phone GPS only runs while the page is open. Reviewed tutorial media and native-speaker review of agricultural terminology must be supplied by administrators. Advanced group settlement and several production integrations remain outstanding; consult the implementation-status document.

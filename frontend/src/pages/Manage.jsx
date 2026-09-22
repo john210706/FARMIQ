@@ -558,7 +558,7 @@ export function Admin() {
               ['sourceUrl', 'Manufacturer / reviewed source HTTPS URL'],
               ['videoUrl', 'Video HTTPS URL (optional)'],
               ['audioUrl', 'Audio HTTPS URL (optional)'],
-              ['captionsUrl', 'WebVTT captions HTTPS URL (optional)'],
+              ['captionsUrl', 'WebVTT captions HTTPS URL (required with video)'],
             ].map(([name, label]) => (
               <Field
                 key={name}

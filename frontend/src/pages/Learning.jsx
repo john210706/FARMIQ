@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { api, download, when } from '../lib/api';
 import { useData, State, Panel, Field, Button, Action, Form, Badge, Empty } from '../ui';
+import { tr } from '../i18n';
 export default function Learning({ language }) {
   const [v, setV] = useState(0),
     [messages, setMessages] = useState([]),
@@ -13,7 +14,7 @@ export default function Learning({ language }) {
   const refresh = () => setV((v) => v + 1);
   const speak = (text) => {
     if (!window.speechSynthesis) {
-      setSpeechError('Audio reading is unavailable in this browser');
+      setSpeechError(tr('Audio reading is unavailable in this browser', language));
       return;
     }
     speechSynthesis.cancel();
@@ -68,13 +69,16 @@ export default function Learning({ language }) {
               onClick={() => {
                 const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
                 if (!Speech) {
-                  setSpeechError('Voice input is unavailable in this browser. Please type your question.');
+                  setSpeechError(
+                    tr('Voice input is unavailable in this browser. Please type your question.', language),
+                  );
                   return;
                 }
                 const s = new Speech();
                 s.lang = { en: 'en-IN', ta: 'ta-IN', hi: 'hi-IN' }[language];
                 s.onresult = (e) => setChat(e.results[0][0].transcript);
-                s.onerror = () => setSpeechError('Microphone access failed; please type your question.');
+                s.onerror = () =>
+                  setSpeechError(tr('Microphone access failed; please type your question.', language));
                 s.start();
               }}
             >

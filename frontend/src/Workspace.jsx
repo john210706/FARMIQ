@@ -23,6 +23,7 @@ import Account from './pages/Account';
 import Community from './pages/Community';
 import Learning from './pages/Learning';
 import './workspace.css';
+import { Localizer } from './i18n';
 const labels = {
   en: {
     dashboard: 'Overview',
@@ -169,114 +170,116 @@ export default function Workspace() {
   else if (page.screen === 'notifications') content = <Notifications navigate={navigate} />;
   else content = <Dashboard user={user} navigate={navigate} />;
   return (
-    <div className="workspace">
-      <a className="skip" href="#main-content">
-        Skip to content
-      </a>
-      <aside className={`side ${menu ? 'open' : ''}`}>
-        <a className="brand" href="#dashboard">
-          <span>
-            <Tractor size={25} />
-          </span>
-          FarmIQ<small>GROW TOGETHER</small>
+    <Localizer language={language}>
+      <div className="workspace">
+        <a className="skip" href="#main-content">
+          Skip to content
         </a>
-        <p className="side-label">{user ? `${user.role.toLowerCase()} workspace` : 'Explore FarmIQ'}</p>
-        <nav>
-          {nav.map((key) => {
-            const Icon = icons[key];
-            return (
+        <aside className={`side ${menu ? 'open' : ''}`}>
+          <a className="brand" href="#dashboard">
+            <span>
+              <Tractor size={25} />
+            </span>
+            FarmIQ<small>GROW TOGETHER</small>
+          </a>
+          <p className="side-label">{user ? `${user.role.toLowerCase()} workspace` : 'Explore FarmIQ'}</p>
+          <nav>
+            {nav.map((key) => {
+              const Icon = icons[key];
+              return (
+                <button
+                  key={key}
+                  onClick={() => navigate(key)}
+                  className={page.screen === key ? 'selected' : ''}
+                >
+                  <Icon size={19} />
+                  {t[key]}
+                </button>
+              );
+            })}
+          </nav>
+          <div className="side-bottom">
+            <span className="leaf">✳</span>
+            <p>
+              Shared machines.
+              <br />
+              Stronger communities.
+            </p>
+            {user && (
+              <>
+                <strong>{user.fullName}</strong>
+                <small>{user.accountId}</small>
+                <Action
+                  secondary
+                  run={async () => {
+                    await api('/auth/logout', { method: 'POST' });
+                    logout();
+                  }}
+                >
+                  Sign out
+                </Action>
+              </>
+            )}
+          </div>
+        </aside>
+        <div className="workspace-main">
+          <header className="header">
+            <div className="row">
               <button
-                key={key}
-                onClick={() => navigate(key)}
-                className={page.screen === key ? 'selected' : ''}
+                className="mobile-menu"
+                aria-label="Toggle navigation"
+                aria-expanded={menu}
+                onClick={() => setMenu(!menu)}
               >
-                <Icon size={19} />
-                {t[key]}
+                <Menu />
               </button>
-            );
-          })}
-        </nav>
-        <div className="side-bottom">
-          <span className="leaf">✳</span>
-          <p>
-            Shared machines.
-            <br />
-            Stronger communities.
-          </p>
-          {user && (
-            <>
-              <strong>{user.fullName}</strong>
-              <small>{user.accountId}</small>
-              <Action
-                secondary
-                run={async () => {
-                  await api('/auth/logout', { method: 'POST' });
-                  logout();
-                }}
-              >
-                Sign out
-              </Action>
-            </>
+              <span>{t[page.screen] || 'Your rental'}</span>
+            </div>
+            <div className="row">
+              <span className={`connection ${online ? '' : 'offline'}`}>{online ? 'Online' : 'Offline'}</span>
+              <select aria-label="Language" value={language} onChange={(e) => setLanguage(e.target.value)}>
+                <option value="en">English</option>
+                <option value="ta">தமிழ்</option>
+                <option value="hi">हिन्दी</option>
+              </select>
+            </div>
+          </header>
+          {capabilities?.payments === 'sandbox' && (
+            <div className="sandbox-banner">
+              DEMO PAYMENT MODE · No money is transferred. No escrow or insurance coverage is provided.
+            </div>
           )}
+          {!online && (
+            <div className="notice">
+              Offline: cached pages and saved drafts remain available. Reconnect to confirm availability or
+              submit changes.
+            </div>
+          )}
+          <main id="main-content" className="main" tabIndex="-1">
+            {content}
+          </main>
+          <footer className="footer">
+            FarmIQ · Equipment access for farming communities{' '}
+            <span>Prototype agreements and policies require review before public launch.</span>
+          </footer>
+          <nav className="bottom-nav">
+            {nav.slice(0, 4).map((key) => {
+              const Icon = icons[key];
+              return (
+                <button
+                  key={key}
+                  onClick={() => navigate(key)}
+                  aria-current={page.screen === key ? 'page' : undefined}
+                >
+                  <Icon size={18} />
+                  {t[key]}
+                </button>
+              );
+            })}
+          </nav>
         </div>
-      </aside>
-      <div className="workspace-main">
-        <header className="header">
-          <div className="row">
-            <button
-              className="mobile-menu"
-              aria-label="Toggle navigation"
-              aria-expanded={menu}
-              onClick={() => setMenu(!menu)}
-            >
-              <Menu />
-            </button>
-            <span>{t[page.screen] || 'Your rental'}</span>
-          </div>
-          <div className="row">
-            <span className={`connection ${online ? '' : 'offline'}`}>{online ? 'Online' : 'Offline'}</span>
-            <select aria-label="Language" value={language} onChange={(e) => setLanguage(e.target.value)}>
-              <option value="en">English</option>
-              <option value="ta">தமிழ்</option>
-              <option value="hi">हिन्दी</option>
-            </select>
-          </div>
-        </header>
-        {capabilities?.payments === 'sandbox' && (
-          <div className="sandbox-banner">
-            DEMO PAYMENT MODE · No money is transferred. No escrow or insurance coverage is provided.
-          </div>
-        )}
-        {!online && (
-          <div className="notice">
-            Offline: cached pages and saved drafts remain available. Reconnect to confirm availability or
-            submit changes.
-          </div>
-        )}
-        <main id="main-content" className="main" tabIndex="-1">
-          {content}
-        </main>
-        <footer className="footer">
-          FarmIQ · Equipment access for farming communities{' '}
-          <span>Prototype agreements and policies require review before public launch.</span>
-        </footer>
-        <nav className="bottom-nav">
-          {nav.slice(0, 4).map((key) => {
-            const Icon = icons[key];
-            return (
-              <button
-                key={key}
-                onClick={() => navigate(key)}
-                aria-current={page.screen === key ? 'page' : undefined}
-              >
-                <Icon size={18} />
-                {t[key]}
-              </button>
-            );
-          })}
-        </nav>
       </div>
-    </div>
+    </Localizer>
   );
 }
 function Dashboard({ user, navigate }) {

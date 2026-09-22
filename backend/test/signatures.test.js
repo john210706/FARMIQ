@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const { validSignature } = require('../src/routes/payments');
 const { signatureValid } = require('../src/routes/channels');
+const channelI18n = require('../src/i18n');
 test('payment signature binds exact raw bytes, rejects tampering and malformed signatures', () => {
   const raw = Buffer.from('{"event":"payment.captured"}'),
     secret = 'test-webhook';
@@ -23,4 +24,11 @@ test('SMS signature binds URL and all form values', () => {
   assert.equal(signatureValid(url, params, sig, secret), true);
   assert.equal(signatureValid(url, { ...params, Body: 'BOOK' }, sig, secret), false);
   assert.equal(signatureValid('https://attacker.com', params, sig, secret), false);
+});
+test('SMS and IVR prompts honor Tamil and Hindi account languages', () => {
+  assert.match(channelI18n.text('menu', 'ta'), /வரவேற்கிறோம்/);
+  assert.match(channelI18n.text('menu', 'hi'), /स्वागत/);
+  assert.equal(channelI18n.status('IN_TRANSIT', 'ta'), 'போக்குவரத்தில்');
+  assert.equal(channelI18n.status('COMPLETED', 'hi'), 'पूर्ण');
+  assert.equal(channelI18n.voiceLanguage('ta'), 'ta-IN');
 });
