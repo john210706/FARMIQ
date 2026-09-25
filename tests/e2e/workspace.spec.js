@@ -42,6 +42,30 @@ test('guest experience has login, browsing, language and no privileged role swit
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(errors).toEqual([]);
 });
+test('driver account is limited to its delivery workspace', async ({ page }) => {
+  test.skip(!process.env.E2E_WITH_API, 'Requires isolated database and demo seed');
+  await page.goto('/');
+  await page.getByLabel('Mobile number or account ID').fill('DEMO-DRIVER');
+  await page.getByLabel('Password', { exact: true }).fill('FarmIQ-demo-2026');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).last().click();
+
+  await expect(page.getByText('DRIVER DELIVERY WORKSPACE')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'My deliveries' }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Find machinery' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Field planner' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Learn & get help' })).toHaveCount(0);
+
+  await page.goto('/#catalog');
+  await expect(page.getByText('DRIVER DELIVERY WORKSPACE')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Find your machine' })).toHaveCount(0);
+
+  await page.goto('/#account');
+  await expect(page.getByText('On duty and available for deliveries')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Saved farm addresses' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Saved machinery' })).toHaveCount(0);
+  await expect(page.getByText('Low-data mode (hide catalogue photos)')).toHaveCount(0);
+  await expect(page.getByRole('option', { name: 'OWNERSHIP' })).toHaveCount(0);
+});
 test('real account sign-in shows working scoped dashboard and can sign out', async ({ page }, testInfo) => {
   test.skip(!process.env.E2E_WITH_API, 'Requires isolated database and demo seed');
   await page.goto('/');

@@ -70,6 +70,19 @@ const icons = {
   account: User,
   notifications: Bell,
 };
+const roleNavigation = {
+  FARMER: ['dashboard', 'catalog', 'bookings', 'community', 'learning', 'notifications', 'account'],
+  OWNER: ['dashboard', 'catalog', 'bookings', 'fleet', 'community', 'learning', 'notifications', 'account'],
+  DRIVER: ['dashboard', 'bookings', 'notifications', 'account'],
+  ADMIN: ['dashboard', 'catalog', 'bookings', 'community', 'learning', 'admin', 'notifications', 'account'],
+};
+const roleRoutes = {
+  FARMER: [...roleNavigation.FARMER, 'machine', 'booking'],
+  OWNER: [...roleNavigation.OWNER, 'machine', 'booking'],
+  DRIVER: [...roleNavigation.DRIVER, 'booking'],
+  ADMIN: [...roleNavigation.ADMIN, 'machine', 'booking'],
+};
+const driverBookingLabels = { en: 'My deliveries', ta: 'என் விநியோகங்கள்', hi: 'मेरी डिलीवरी' };
 function route() {
   const [screen, id] = location.hash.slice(1).split('/');
   return { screen: screen || 'dashboard', id };
@@ -128,22 +141,13 @@ export default function Workspace() {
     localStorage.setItem('farmiq-language', language);
   }, [language]);
   const user = session?.user;
-  const nav = user
-    ? [
-        'dashboard',
-        'catalog',
-        'bookings',
-        ...(user.role === 'OWNER' ? ['fleet'] : []),
-        'community',
-        'learning',
-        ...(user.role === 'ADMIN' ? ['admin'] : []),
-        'notifications',
-        'account',
-      ]
-    : ['catalog', 'account'];
+  const nav = user ? roleNavigation[user.role] || ['dashboard', 'account'] : ['catalog', 'account'];
+  const screen = user && !roleRoutes[user.role]?.includes(page.screen) ? 'dashboard' : page.screen;
+  const navLabel = (key) =>
+    user?.role === 'DRIVER' && key === 'bookings' ? driverBookingLabels[language] : t[key];
   let content;
   if (checking) content = <p className="notice">Checking your session…</p>;
-  else if (!user && !['catalog', 'machine'].includes(page.screen))
+  else if (!user && !['catalog', 'machine'].includes(screen))
     content = (
       <Auth
         onLogin={(s) => {
@@ -154,20 +158,20 @@ export default function Workspace() {
         }}
       />
     );
-  else if (page.screen === 'catalog')
+  else if (screen === 'catalog')
     content = <Catalog navigate={navigate} language={language} lowData={user?.preferences?.lowData} />;
-  else if (page.screen === 'machine' && page.id)
+  else if (screen === 'machine' && page.id)
     content = <MachineDetail key={page.id} id={page.id} navigate={navigate} />;
-  else if (page.screen === 'bookings') content = <Bookings user={user} navigate={navigate} />;
-  else if (page.screen === 'booking' && page.id)
+  else if (screen === 'bookings') content = <Bookings user={user} navigate={navigate} />;
+  else if (screen === 'booking' && page.id)
     content = <BookingDetail key={page.id} id={page.id} user={user} navigate={navigate} />;
-  else if (page.screen === 'fleet' && user.role === 'OWNER') content = <Fleet />;
-  else if (page.screen === 'admin' && user.role === 'ADMIN') content = <Admin />;
-  else if (page.screen === 'community') content = <Community user={user} navigate={navigate} />;
-  else if (page.screen === 'learning') content = <Learning language={language} />;
-  else if (page.screen === 'account')
+  else if (screen === 'fleet' && user.role === 'OWNER') content = <Fleet />;
+  else if (screen === 'admin' && user.role === 'ADMIN') content = <Admin />;
+  else if (screen === 'community') content = <Community user={user} navigate={navigate} />;
+  else if (screen === 'learning') content = <Learning language={language} />;
+  else if (screen === 'account')
     content = <Account user={user} onUser={onUser} onLogout={logout} navigate={navigate} />;
-  else if (page.screen === 'notifications') content = <Notifications navigate={navigate} />;
+  else if (screen === 'notifications') content = <Notifications navigate={navigate} />;
   else content = <Dashboard user={user} navigate={navigate} />;
   return (
     <Localizer language={language}>
@@ -187,13 +191,9 @@ export default function Workspace() {
             {nav.map((key) => {
               const Icon = icons[key];
               return (
-                <button
-                  key={key}
-                  onClick={() => navigate(key)}
-                  className={page.screen === key ? 'selected' : ''}
-                >
+                <button key={key} onClick={() => navigate(key)} className={screen === key ? 'selected' : ''}>
                   <Icon size={19} />
-                  {t[key]}
+                  {navLabel(key)}
                 </button>
               );
             })}
@@ -233,7 +233,7 @@ export default function Workspace() {
               >
                 <Menu />
               </button>
-              <span>{t[page.screen] || 'Your rental'}</span>
+              <span>{navLabel(screen) || 'Your rental'}</span>
             </div>
             <div className="row">
               <span className={`connection ${online ? '' : 'offline'}`}>{online ? 'Online' : 'Offline'}</span>
@@ -244,7 +244,7 @@ export default function Workspace() {
               </select>
             </div>
           </header>
-          {capabilities?.payments === 'sandbox' && (
+          {user?.role !== 'DRIVER' && capabilities?.payments === 'sandbox' && (
             <div className="sandbox-banner">
               DEMO PAYMENT MODE · No money is transferred. No escrow or insurance coverage is provided.
             </div>
@@ -269,10 +269,10 @@ export default function Workspace() {
                 <button
                   key={key}
                   onClick={() => navigate(key)}
-                  aria-current={page.screen === key ? 'page' : undefined}
+                  aria-current={screen === key ? 'page' : undefined}
                 >
                   <Icon size={18} />
-                  {t[key]}
+                  {navLabel(key)}
                 </button>
               );
             })}
@@ -283,6 +283,7 @@ export default function Workspace() {
   );
 }
 function Dashboard({ user, navigate }) {
+  if (user.role === 'DRIVER') return <DriverDashboard user={user} navigate={navigate} />;
   const { data, error } = useData('/analytics');
   return (
     <>
@@ -385,6 +386,80 @@ function Dashboard({ user, navigate }) {
                   {data.rentedHours} completed rental hours · {money(data.commission)} calculated platform
                   commission
                 </p>
+              </Panel>
+            </div>
+          </>
+        )}
+      </State>
+    </>
+  );
+}
+function DriverDashboard({ user, navigate }) {
+  const { data, error } = useData('/driver/deliveries');
+  const active =
+    data?.filter((job) => ['ASSIGNED', 'PICKUP_INSPECTION', 'IN_TRANSIT'].includes(job.status)) || [];
+  const completed = data?.filter((job) => ['DELIVERED', 'COMPLETED'].includes(job.status)) || [];
+  const next = active[0];
+  return (
+    <>
+      <div className="welcome">
+        <div>
+          <span className="eyebrow">DRIVER DELIVERY WORKSPACE</span>
+          <h1>Hello, {user.fullName.split(' ')[0]}.</h1>
+          <p>See assigned deliveries, complete pickup checks, share GPS and confirm handover.</p>
+          <Button onClick={() => navigate('bookings')}>Open my deliveries →</Button>
+        </div>
+        <div className="field-art" aria-hidden="true">
+          <Tractor size={120} strokeWidth={1} />
+          <span>
+            SAFE PICKUP.
+            <br />
+            VERIFIED HANDOVER.
+          </span>
+        </div>
+      </div>
+      <State data={data} error={error}>
+        {data && (
+          <>
+            <div className="metrics">
+              {[
+                ['Assigned deliveries', active.length],
+                ['Completed deliveries', completed.length],
+                ['Duty status', user.onDuty ? 'ON DUTY' : 'OFF DUTY'],
+                ['Verification', user.verificationStatus],
+              ].map(([title, value]) => (
+                <section className="metric" key={title}>
+                  <span>{title}</span>
+                  <strong>{value}</strong>
+                  <small>Driver account activity</small>
+                </section>
+              ))}
+            </div>
+            <div className="two">
+              <Panel title="Next assigned delivery">
+                {next ? (
+                  <div className="stack">
+                    <Badge>{next.status}</Badge>
+                    <h3>{next.machinery.name}</h3>
+                    <p>
+                      {when(next.scheduledAt)} · {next.farmAddress}
+                    </p>
+                    <Button onClick={() => navigate('booking', next.id)}>Open delivery job →</Button>
+                  </div>
+                ) : (
+                  <Empty>No delivery is currently assigned to you.</Empty>
+                )}
+              </Panel>
+              <Panel title="Driver readiness">
+                <p>
+                  {user.verificationStatus === 'VERIFIED'
+                    ? 'Your driver account is verified.'
+                    : 'Your driver verification is still pending.'}
+                </p>
+                <p>{user.onDuty ? 'You are available for assignment.' : 'You are currently off duty.'}</p>
+                <Button secondary onClick={() => navigate('account')}>
+                  Update duty status →
+                </Button>
               </Panel>
             </div>
           </>

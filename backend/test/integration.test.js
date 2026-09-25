@@ -158,11 +158,33 @@ test(
       JSON.stringify(pays.map((r) => r.body)),
     );
     assert.equal(await prisma.transaction.count({ where: { bookingId: b.id, kind: 'ADVANCE' } }), 1);
+    assert.equal((await call(driver.token, 'get', '/bookings')).status, 403);
+    assert.equal((await call(driver.token, 'get', '/analytics')).status, 403);
+    const unassigned = await call(driver.token, 'get', '/driver/deliveries');
+    assert.equal(
+      unassigned.body.some((j) => j.id === b.id),
+      false,
+    );
+    assert.equal(
+      (
+        await call(adminToken, 'post', `/admin/bookings/${b.id}/assign`, {
+          driverId: driver.user.id,
+          note: 'Assigned for integration delivery',
+        })
+      ).status,
+      200,
+    );
     const job = await call(driver.token, 'get', '/driver/deliveries');
-    const redacted = job.body.find((j) => j.id === b.id);
-    assert.equal(redacted.farmer, undefined);
-    assert.equal(redacted.farmLat, undefined);
-    assert.equal((await call(driver.token, 'post', `/driver/deliveries/${b.id}/accept`, {})).status, 200);
+    const assigned = job.body.find((j) => j.id === b.id);
+    assert.equal(assigned.driver.id, driver.user.id);
+    assert.equal(assigned.farmer.id, winner.user.id);
+    assert.equal(assigned.quote, undefined);
+    assert.equal(assigned.transactions, undefined);
+    assert.equal(assigned.totalAmount, undefined);
+    const driverDetail = await call(driver.token, 'get', `/bookings/${b.id}`);
+    assert.equal(driverDetail.status, 200);
+    assert.equal(driverDetail.body.agreementVersion, undefined);
+    assert.equal(driverDetail.body.advanceAmount, undefined);
     assert.equal(
       (await call(driver.token, 'patch', `/bookings/${b.id}/status`, { status: 'PICKUP_INSPECTION' })).status,
       200,

@@ -7,29 +7,37 @@ const Map = lazy(() => import('./Map'));
 export default function Bookings({ navigate, user }) {
   const [version, setVersion] = useState(0),
     [filter, setFilter] = useState('');
-  const { data, error } = useData(user.role === 'DRIVER' ? '/driver/deliveries' : '/bookings', version);
+  const driver = user.role === 'DRIVER';
+  const { data, error } = useData(driver ? '/driver/deliveries' : '/bookings', version);
+  const statuses = driver
+    ? ['ASSIGNED', 'PICKUP_INSPECTION', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED', 'CANCELLED']
+    : [
+        'REQUESTED',
+        'PENDING_PAYMENT',
+        'PAID',
+        'ASSIGNED',
+        'IN_TRANSIT',
+        'DELIVERED',
+        'IN_PROGRESS',
+        'COMPLETED',
+        'CANCELLED',
+      ];
   return (
     <>
       <div className="page-heading">
         <span className="eyebrow">YOUR RENTAL JOURNEY</span>
-        <h1>{user.role === 'DRIVER' ? 'Delivery jobs' : 'Bookings'}</h1>
-        <p>Every decision, inspection and payment in one place.</p>
+        <h1>{driver ? 'My assigned deliveries' : 'Bookings'}</h1>
+        <p>
+          {driver
+            ? 'Only delivery jobs assigned to your driver account are shown here.'
+            : 'Every decision, inspection and payment in one place.'}
+        </p>
       </div>
       <div className="toolbar">
         <Field label="Filter status">
           <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-            <option value="">All bookings</option>
-            {[
-              'REQUESTED',
-              'PENDING_PAYMENT',
-              'PAID',
-              'ASSIGNED',
-              'IN_TRANSIT',
-              'DELIVERED',
-              'IN_PROGRESS',
-              'COMPLETED',
-              'CANCELLED',
-            ].map((s) => (
+            <option value="">{driver ? 'All deliveries' : 'All bookings'}</option>
+            {statuses.map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
@@ -54,23 +62,20 @@ export default function Bookings({ navigate, user }) {
                     <small>#{b.id.slice(0, 8)}</small>
                   </div>
                   <div className="row">
-                    <strong>{money(b.totalAmount || b.deliveryFee)}</strong>
-                    {b.area ? (
-                      <Action
-                        run={() => api(`/driver/deliveries/${b.id}/accept`, { method: 'POST' })}
-                        done={() => setVersion((v) => v + 1)}
-                      >
-                        Accept delivery
-                      </Action>
-                    ) : (
-                      <Button onClick={() => navigate('booking', b.id)}>Open booking</Button>
-                    )}
+                    {!driver && <strong>{money(b.totalAmount)}</strong>}
+                    <Button onClick={() => navigate('booking', b.id)}>
+                      {driver ? 'Open delivery' : 'Open booking'}
+                    </Button>
                   </div>
                 </article>
               ))}
           </div>
         ) : (
-          <Empty>No bookings in this view. New requests and delivery jobs will appear here.</Empty>
+          <Empty>
+            {driver
+              ? 'No delivery is assigned to you in this view.'
+              : 'No bookings in this view. New requests and delivery jobs will appear here.'}
+          </Empty>
         )}
       </State>
     </>
@@ -88,6 +93,7 @@ const steps = [
   'RETURN_INSPECTION',
   'COMPLETED',
 ];
+const driverSteps = ['ASSIGNED', 'PICKUP_INSPECTION', 'IN_TRANSIT', 'DELIVERED'];
 export function BookingDetail({ id, user, navigate }) {
   const [version, setVersion] = useState(0),
     [code, setCode] = useState(''),
@@ -144,7 +150,7 @@ export function BookingDetail({ id, user, navigate }) {
         <>
           <div className="row spread">
             <Button secondary onClick={() => navigate('bookings')}>
-              ← Bookings
+              {user.role === 'DRIVER' ? '← My deliveries' : '← Bookings'}
             </Button>
             <Button secondary onClick={refresh}>
               Refresh
@@ -156,11 +162,13 @@ export function BookingDetail({ id, user, navigate }) {
             <p>
               {when(b.scheduledAt)} · {b.durationHours} hours · {b.farmAddress}
             </p>
-            <small>Booking #{b.id}</small>
+            <small>
+              {user.role === 'DRIVER' ? 'Delivery' : 'Booking'} #{b.id}
+            </small>
           </div>
           <ol className="stepper">
-            {steps.map((s, i) => (
-              <li key={s} className={steps.indexOf(b.status) >= i ? 'done' : ''}>
+            {(user.role === 'DRIVER' ? driverSteps : steps).map((s, i, visibleSteps) => (
+              <li key={s} className={visibleSteps.indexOf(b.status) >= i ? 'done' : ''}>
                 {tr(s).replaceAll('_', ' ')}
               </li>
             ))}
@@ -217,11 +225,12 @@ export function BookingDetail({ id, user, navigate }) {
                     </Action>
                   )}
                   {user.role === 'FARMER' && code && <strong className="code">{code}</strong>}
-                  {user.role === 'DRIVER' && (
-                    <Button secondary onClick={() => setGps(!gps)}>
-                      {gps ? 'Stop sharing GPS' : 'Share my GPS'}
-                    </Button>
-                  )}
+                  {user.role === 'DRIVER' &&
+                    ['ASSIGNED', 'PICKUP_INSPECTION', 'IN_TRANSIT'].includes(b.status) && (
+                      <Button secondary onClick={() => setGps(!gps)}>
+                        {gps ? 'Stop sharing GPS' : 'Share my GPS'}
+                      </Button>
+                    )}
                   {user.role === 'DRIVER' && b.status === 'IN_TRANSIT' && (
                     <Form
                       label="Confirm delivery"
@@ -277,7 +286,7 @@ export function BookingDetail({ id, user, navigate }) {
                 <Inspection booking={b} refresh={refresh} />
               )}
               {b.driver && (
-                <Panel title="Delivery location">
+                <Panel title={user.role === 'DRIVER' ? 'Route & contacts' : 'Delivery location'}>
                   <Suspense fallback={<p>Loading map…</p>}>
                     <Map booking={b} />
                   </Suspense>
@@ -287,9 +296,32 @@ export function BookingDetail({ id, user, navigate }) {
                       : 'No live GPS update received.'}{' '}
                     The dotted line indicates distance, not a road route.
                   </p>
-                  <p>
-                    {b.driver.fullName} · <a href={`tel:${b.driver.phone}`}>Call delivery partner</a>
-                  </p>
+                  {user.role === 'DRIVER' ? (
+                    <div className="stack">
+                      <p>
+                        <strong>Pickup:</strong> {b.machinery.location || 'Machinery pickup location'}
+                      </p>
+                      <p>
+                        <strong>Deliver to:</strong> {b.farmAddress}
+                      </p>
+                      <p>
+                        {b.farmer.fullName} · <a href={`tel:${b.farmer.phone}`}>Call farmer</a>
+                      </p>
+                      {b.machinery.latitude != null && b.machinery.longitude != null && (
+                        <a
+                          target="_blank"
+                          rel="noreferrer"
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${b.machinery.latitude},${b.machinery.longitude}`}
+                        >
+                          Directions to pickup
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <p>
+                      {b.driver.fullName} · <a href={`tel:${b.driver.phone}`}>Call delivery partner</a>
+                    </p>
+                  )}
                   <a
                     target="_blank"
                     rel="noreferrer"
@@ -375,40 +407,44 @@ export function BookingDetail({ id, user, navigate }) {
               </Panel>
             </section>
             <aside className="stack">
-              <Panel title="Agreed quotation">
-                <Quote quote={b.quote} />
-                <p className="muted">
-                  Agreement {b.agreementVersion} · Accepted{' '}
-                  {b.agreementAcceptedAt ? when(b.agreementAcceptedAt) : 'not recorded'}
-                </p>
-                <Action
-                  secondary
-                  run={async () => {
-                    const r = await api(`/bookings/${id}/receipt`);
-                    download(
-                      `FarmIQ-${id}.txt`,
-                      `FarmIQ PAYMENT RECEIPT\n${r.receiptNumber}\n${r.machine}\n${r.farmer}\n${JSON.stringify(r.quote, null, 2)}\n${JSON.stringify(r.transactions, null, 2)}\n${r.note}`,
-                    );
-                  }}
-                >
-                  Download receipt
-                </Action>
-              </Panel>
-              <Panel title="Payment records">
-                {b.transactions.length ? (
-                  b.transactions.map((t) => (
-                    <div className="list-row" key={t.id}>
-                      <span>
-                        {t.kind} · {t.provider}
-                      </span>
-                      <strong>{money(t.amount)}</strong>
-                      <Badge>{t.status}</Badge>
-                    </div>
-                  ))
-                ) : (
-                  <p>No payments yet.</p>
-                )}
-              </Panel>
+              {user.role !== 'DRIVER' && (
+                <Panel title="Agreed quotation">
+                  <Quote quote={b.quote} />
+                  <p className="muted">
+                    Agreement {b.agreementVersion} · Accepted{' '}
+                    {b.agreementAcceptedAt ? when(b.agreementAcceptedAt) : 'not recorded'}
+                  </p>
+                  <Action
+                    secondary
+                    run={async () => {
+                      const r = await api(`/bookings/${id}/receipt`);
+                      download(
+                        `FarmIQ-${id}.txt`,
+                        `FarmIQ PAYMENT RECEIPT\n${r.receiptNumber}\n${r.machine}\n${r.farmer}\n${JSON.stringify(r.quote, null, 2)}\n${JSON.stringify(r.transactions, null, 2)}\n${r.note}`,
+                      );
+                    }}
+                  >
+                    Download receipt
+                  </Action>
+                </Panel>
+              )}
+              {user.role !== 'DRIVER' && (
+                <Panel title="Payment records">
+                  {b.transactions.length ? (
+                    b.transactions.map((t) => (
+                      <div className="list-row" key={t.id}>
+                        <span>
+                          {t.kind} · {t.provider}
+                        </span>
+                        <strong>{money(t.amount)}</strong>
+                        <Badge>{t.status}</Badge>
+                      </div>
+                    ))
+                  ) : (
+                    <p>No payments yet.</p>
+                  )}
+                </Panel>
+              )}
               <Panel title="Inspection evidence">
                 {b.inspections.length ? (
                   b.inspections.map((i) => (

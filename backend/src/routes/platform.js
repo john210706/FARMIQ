@@ -137,7 +137,7 @@ router.get('/tutorials', async (req, res) =>
   res.json(await prisma.tutorial.findMany({ where: { published: true } })),
 );
 router.use(requireAuth());
-router.get('/bookings', async (req, res) =>
+router.get('/bookings', requireAuth(['FARMER', 'OWNER', 'ADMIN']), async (req, res) =>
   res.json(
     (
       await prisma.booking.findMany({
@@ -149,7 +149,7 @@ router.get('/bookings', async (req, res) =>
     ).map(booking.response),
   ),
 );
-router.get('/rides', async (req, res) =>
+router.get('/rides', requireAuth(['FARMER', 'OWNER', 'ADMIN']), async (req, res) =>
   res.json(
     (
       await prisma.booking.findMany({
@@ -187,7 +187,7 @@ router.post('/bookings', requireAuth(['FARMER', 'ADMIN']), async (req, res) =>
   res.status(201).json(booking.response(await booking.create(req.user, schemas.booking.parse(req.body)))),
 );
 router.get('/bookings/:id', async (req, res) =>
-  res.json(booking.response(await booking.get(prisma, req.params.id, req.user))),
+  res.json(booking.responseFor(await booking.get(prisma, req.params.id, req.user), req.user)),
 );
 router.patch('/bookings/:id/status', async (req, res) => {
   const i = z
@@ -197,7 +197,12 @@ router.patch('/bookings/:id/status', async (req, res) => {
       code: z.string().max(10).default(''),
     })
     .parse(req.body);
-  res.json(booking.response(await booking.transition(req.user, req.params.id, i.status, i.note, i.code)));
+  res.json(
+    booking.responseFor(
+      await booking.transition(req.user, req.params.id, i.status, i.note, i.code),
+      req.user,
+    ),
+  );
 });
 router.post('/bookings/:id/reschedule', requireAuth(['FARMER', 'ADMIN']), async (req, res) => {
   const i = z.object({ scheduledAt: date }).parse(req.body);
@@ -272,7 +277,7 @@ router.post('/bookings/:id/reviews', requireAuth(['FARMER']), async (req, res) =
     }),
   );
 });
-router.get('/bookings/:id/receipt', async (req, res) => {
+router.get('/bookings/:id/receipt', requireAuth(['FARMER', 'OWNER', 'ADMIN']), async (req, res) => {
   const b = await booking.get(prisma, req.params.id, req.user);
   res.json({
     receiptNumber: `FQ-${b.id}`,
@@ -288,48 +293,12 @@ router.get('/bookings/:id/receipt', async (req, res) => {
 });
 router.get('/driver/deliveries', requireAuth(['DRIVER', 'ADMIN']), async (req, res) => {
   const jobs = await prisma.booking.findMany({
-    where: {
-      OR: [
-        { driverId: req.user.id, status: { in: activeStatuses } },
-        { status: 'PAID', driverId: null },
-      ],
-    },
+    where: req.user.role === 'ADMIN' ? { driverId: { not: null } } : { driverId: req.user.id },
     include: booking.include,
+    orderBy: { createdAt: 'desc' },
     take: 100,
   });
-  res.json(
-    jobs.map((b) =>
-      b.driverId === req.user.id || req.user.role === 'ADMIN'
-        ? booking.response(b)
-        : {
-            id: b.id,
-            status: b.status,
-            scheduledAt: b.scheduledAt,
-            machinery: { name: b.machinery.name, location: b.machinery.location },
-            area: 'Pickup available',
-            deliveryFee: b.deliveryFee,
-          },
-    ),
-  );
-});
-router.post('/driver/deliveries/:id/accept', requireAuth(['DRIVER']), async (req, res) => {
-  if (req.user.verificationStatus !== 'VERIFIED' || !req.user.onDuty)
-    fail(403, 'Verification and on-duty status are required');
-  const b = await booking.serial(async (tx) => {
-    const b = await tx.booking.findUnique({ where: { id: req.params.id }, include: booking.include });
-    if (!b || b.status !== 'PAID' || b.driverId) fail(409, 'Delivery is no longer available');
-    if (
-      await tx.booking.count({
-        where: {
-          driverId: req.user.id,
-          status: { in: ['ASSIGNED', 'PICKUP_INSPECTION', 'IN_TRANSIT', 'DELIVERED', 'RETURN_INSPECTION'] },
-        },
-      })
-    )
-      fail(409, 'Finish your current delivery first');
-    return booking.record(tx, b, req.user, 'ASSIGNED', 'Driver accepted delivery', { driverId: req.user.id });
-  });
-  res.json(booking.response(b));
+  res.json(jobs.map((job) => booking.responseFor(job, req.user)));
 });
 router.patch('/drivers/location', requireAuth(['DRIVER']), async (req, res) => {
   const i = z.object({ latitude: lat, longitude: lng }).parse(req.body);
@@ -396,22 +365,22 @@ router.post('/owner/machinery/:id/service', owner, async (req, res) => {
     }),
   );
 });
-router.get('/addresses', async (req, res) =>
+router.get('/addresses', requireAuth(['FARMER', 'OWNER', 'ADMIN']), async (req, res) =>
   res.json(await prisma.address.findMany({ where: { userId: req.user.id } })),
 );
-router.post('/addresses', async (req, res) =>
+router.post('/addresses', requireAuth(['FARMER', 'OWNER', 'ADMIN']), async (req, res) =>
   res
     .status(201)
     .json(await prisma.address.create({ data: { ...schemas.address.parse(req.body), userId: req.user.id } })),
 );
-router.delete('/addresses/:id', async (req, res) => {
+router.delete('/addresses/:id', requireAuth(['FARMER', 'OWNER', 'ADMIN']), async (req, res) => {
   await prisma.address.deleteMany({ where: { id: req.params.id, userId: req.user.id } });
   res.json({ ok: true });
 });
-router.get('/favourites', async (req, res) =>
+router.get('/favourites', requireAuth(['FARMER', 'OWNER', 'ADMIN']), async (req, res) =>
   res.json(await prisma.favourite.findMany({ where: { userId: req.user.id }, include: { machinery: true } })),
 );
-router.put('/favourites/:id', async (req, res) =>
+router.put('/favourites/:id', requireAuth(['FARMER', 'OWNER', 'ADMIN']), async (req, res) =>
   res.json(
     await prisma.favourite.upsert({
       where: { userId_machineryId: { userId: req.user.id, machineryId: req.params.id } },
@@ -420,7 +389,7 @@ router.put('/favourites/:id', async (req, res) =>
     }),
   ),
 );
-router.delete('/favourites/:id', async (req, res) => {
+router.delete('/favourites/:id', requireAuth(['FARMER', 'OWNER', 'ADMIN']), async (req, res) => {
   await prisma.favourite.deleteMany({ where: { userId: req.user.id, machineryId: req.params.id } });
   res.json({ ok: true });
 });
@@ -465,6 +434,8 @@ fs.mkdirSync(uploadDir, { recursive: true });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
 router.post('/documents', upload.single('file'), async (req, res) => {
   const kind = z.enum(['IDENTITY', 'LICENCE', 'OWNERSHIP', 'INSPECTION']).parse(req.body.kind);
+  if (req.user.role === 'DRIVER' && !['IDENTITY', 'LICENCE', 'INSPECTION'].includes(kind))
+    fail(403, 'Drivers may upload identity, licence and assigned-delivery inspection documents only');
   const f = req.file;
   if (!f) fail(400, 'Choose a file');
   const bytes = f.buffer;
@@ -577,7 +548,7 @@ router.delete('/groups/:id/join', requireAuth(['FARMER']), async (req, res) => {
   await prisma.groupMember.deleteMany({ where: { groupId: req.params.id, userId: req.user.id } });
   res.json({ ok: true });
 });
-router.get('/analytics', async (req, res) => {
+router.get('/analytics', requireAuth(['FARMER', 'OWNER', 'ADMIN']), async (req, res) => {
   const bookings = await prisma.booking.findMany({
     where: scope(req.user),
     include: { machinery: true, transactions: true },

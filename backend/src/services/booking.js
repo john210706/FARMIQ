@@ -36,6 +36,26 @@ function response(b) {
     machinery: { ...machinery, owner: contact(machinery.owner) },
   };
 }
+function responseFor(b, user) {
+  const value = response(b);
+  if (user.role !== 'DRIVER') return value;
+  const {
+    quote,
+    transactions,
+    reviews,
+    requestKey,
+    holdExpiresAt,
+    agreementVersion,
+    agreementAcceptedAt,
+    cancellationFee,
+    totalAmount,
+    advanceAmount,
+    deliveryFee,
+    operatorFee,
+    ...delivery
+  } = value;
+  return delivery;
+}
 async function serial(work) {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
@@ -304,4 +324,16 @@ async function settle(tx, transaction, actor) {
     `${transaction.kind.toLowerCase()} payment confirmed`,
   );
 }
-module.exports = { include, response, serial, get, record, available, makeQuote, create, transition, settle };
+module.exports = {
+  include,
+  response,
+  responseFor,
+  serial,
+  get,
+  record,
+  available,
+  makeQuote,
+  create,
+  transition,
+  settle,
+};

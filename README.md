@@ -40,7 +40,7 @@ Open the Vite URL, normally `http://localhost:5173`. `/api` is proxied to port 3
 1. Farmer selects a verified machine, date, duration, address and optional verified operator, reviews the server quote, and accepts the rental agreement.
 2. Owner accepts the request. The payment reservation lasts 30 minutes.
 3. Farmer pays the 50% advance. Sandbox mode records a simulated transaction without moving money.
-4. A verified on-duty driver accepts the available job; only then are farm and contact details disclosed.
+4. Automatic dispatch or an administrator assigns a verified, on-duty driver; only that assigned driver can see the farm and contact details.
 5. Driver uploads pickup inspection photos, starts delivery and shares GPS while the delivery page is open.
 6. Farmer generates a handover code. Driver must provide it with a recent GPS fix within 500 metres of the farm.
 7. Farmer records the delivery inspection, pays the balance and starts the rental.

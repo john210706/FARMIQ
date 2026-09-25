@@ -5,9 +5,10 @@ export default function Account({ user, onUser, onLogout, navigate }) {
   const [v, setV] = useState(0),
     [notice, setNotice] = useState('');
   const refresh = () => setV((v) => v + 1);
-  const { data: addresses } = useData('/addresses', v);
+  const isDriver = user.role === 'DRIVER';
+  const { data: addresses } = useData(isDriver ? null : '/addresses', v);
   const { data: documents } = useData('/documents', v);
-  const { data: favourites } = useData('/favourites', v);
+  const { data: favourites } = useData(isDriver ? null : '/favourites', v);
   return (
     <>
       <div className="page-heading">
@@ -33,7 +34,10 @@ export default function Account({ user, onUser, onLogout, navigate }) {
                   body: {
                     fullName: v.fullName,
                     language: v.language,
-                    preferences: { sms: v.sms === 'on', lowData: v.lowData === 'on' },
+                    preferences: {
+                      sms: v.sms === 'on',
+                      ...(!isDriver ? { lowData: v.lowData === 'on' } : {}),
+                    },
                     ...(user.role === 'DRIVER' ? { onDuty: v.onDuty === 'on' } : {}),
                   },
                 }),
@@ -49,10 +53,12 @@ export default function Account({ user, onUser, onLogout, navigate }) {
                 <option value="hi">हिन्दी</option>
               </select>
             </Field>
-            <label className="check">
-              <input name="lowData" type="checkbox" defaultChecked={user.preferences?.lowData} />
-              Low-data mode (hide catalogue photos)
-            </label>
+            {!isDriver && (
+              <label className="check">
+                <input name="lowData" type="checkbox" defaultChecked={user.preferences?.lowData} />
+                Low-data mode (hide catalogue photos)
+              </label>
+            )}
             <label className="check">
               <input name="sms" type="checkbox" defaultChecked={user.preferences?.sms} />
               SMS notifications when configured
@@ -78,7 +84,7 @@ export default function Account({ user, onUser, onLogout, navigate }) {
               <select name="kind">
                 <option>IDENTITY</option>
                 <option>LICENCE</option>
-                <option>OWNERSHIP</option>
+                {!isDriver && <option>OWNERSHIP</option>}
               </select>
             </Field>
             <Field
@@ -102,65 +108,69 @@ export default function Account({ user, onUser, onLogout, navigate }) {
             ))}
         </Panel>
       </div>
-      <Panel title="Saved farm addresses">
-        <Form
-          label="Save address"
-          onSubmit={async (v, f) => {
-            await api('/addresses', {
-              method: 'POST',
-              body: { ...v, latitude: Number(v.latitude), longitude: Number(v.longitude) },
-            });
-            f.reset();
-            refresh();
-          }}
-        >
-          <div className="two">
-            <Field label="Label" name="label" required />
-            <Field label="Full address" name="address" required />
-            <Field label="Latitude" name="latitude" type="number" step="any" min="-90" max="90" required />
-            <Field
-              label="Longitude"
-              name="longitude"
-              type="number"
-              step="any"
-              min="-180"
-              max="180"
-              required
-            />
-          </div>
-        </Form>
-        {addresses?.map((a) => (
-          <div className="list-row" key={a.id}>
-            <strong>{a.label}</strong>
-            <span>{a.address}</span>
-            <Action secondary run={() => api(`/addresses/${a.id}`, { method: 'DELETE' })} done={refresh}>
-              Remove
-            </Action>
-          </div>
-        ))}
-      </Panel>
-      <Panel title="Saved machinery">
-        {favourites?.length ? (
-          favourites.map((f) => (
-            <div className="list-row" key={f.machineryId}>
-              <strong>{f.machinery.name}</strong>
-              <span>{money(f.machinery.pricePerHour)}/h</span>
-              <Button secondary onClick={() => navigate('machine', f.machineryId)}>
-                View
-              </Button>
-              <Action
-                secondary
-                run={() => api(`/favourites/${f.machineryId}`, { method: 'DELETE' })}
-                done={refresh}
-              >
-                Unsave
+      {!isDriver && (
+        <Panel title="Saved farm addresses">
+          <Form
+            label="Save address"
+            onSubmit={async (v, f) => {
+              await api('/addresses', {
+                method: 'POST',
+                body: { ...v, latitude: Number(v.latitude), longitude: Number(v.longitude) },
+              });
+              f.reset();
+              refresh();
+            }}
+          >
+            <div className="two">
+              <Field label="Label" name="label" required />
+              <Field label="Full address" name="address" required />
+              <Field label="Latitude" name="latitude" type="number" step="any" min="-90" max="90" required />
+              <Field
+                label="Longitude"
+                name="longitude"
+                type="number"
+                step="any"
+                min="-180"
+                max="180"
+                required
+              />
+            </div>
+          </Form>
+          {addresses?.map((a) => (
+            <div className="list-row" key={a.id}>
+              <strong>{a.label}</strong>
+              <span>{a.address}</span>
+              <Action secondary run={() => api(`/addresses/${a.id}`, { method: 'DELETE' })} done={refresh}>
+                Remove
               </Action>
             </div>
-          ))
-        ) : (
-          <p>No saved machinery yet.</p>
-        )}
-      </Panel>
+          ))}
+        </Panel>
+      )}
+      {!isDriver && (
+        <Panel title="Saved machinery">
+          {favourites?.length ? (
+            favourites.map((f) => (
+              <div className="list-row" key={f.machineryId}>
+                <strong>{f.machinery.name}</strong>
+                <span>{money(f.machinery.pricePerHour)}/h</span>
+                <Button secondary onClick={() => navigate('machine', f.machineryId)}>
+                  View
+                </Button>
+                <Action
+                  secondary
+                  run={() => api(`/favourites/${f.machineryId}`, { method: 'DELETE' })}
+                  done={refresh}
+                >
+                  Unsave
+                </Action>
+              </div>
+            ))
+          ) : (
+            <p>No saved machinery yet.</p>
+          )}
+        </Panel>
+      )}
       <Panel title="Account closure">
         <p>
           Closing your account disables access. Active bookings must be resolved first; transaction history is
