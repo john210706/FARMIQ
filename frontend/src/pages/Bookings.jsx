@@ -10,7 +10,18 @@ export default function Bookings({ navigate, user }) {
   const driver = user.role === 'DRIVER';
   const { data, error } = useData(driver ? '/driver/deliveries' : '/bookings', version);
   const statuses = driver
-    ? ['ASSIGNED', 'PICKUP_INSPECTION', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED', 'CANCELLED']
+    ? [
+        'ASSIGNED',
+        'PICKUP_INSPECTION',
+        'IN_TRANSIT',
+        'DELIVERED',
+        'IN_PROGRESS',
+        'RETURN_INSPECTION',
+        'RETURN_IN_TRANSIT',
+        'RETURNED',
+        'COMPLETED',
+        'CANCELLED',
+      ]
     : [
         'REQUESTED',
         'PENDING_PAYMENT',
@@ -19,6 +30,9 @@ export default function Bookings({ navigate, user }) {
         'IN_TRANSIT',
         'DELIVERED',
         'IN_PROGRESS',
+        'RETURN_INSPECTION',
+        'RETURN_IN_TRANSIT',
+        'RETURNED',
         'COMPLETED',
         'CANCELLED',
       ];
@@ -91,21 +105,33 @@ const steps = [
   'DELIVERED',
   'IN_PROGRESS',
   'RETURN_INSPECTION',
+  'RETURN_IN_TRANSIT',
+  'RETURNED',
   'COMPLETED',
 ];
-const driverSteps = ['ASSIGNED', 'PICKUP_INSPECTION', 'IN_TRANSIT', 'DELIVERED'];
+const driverSteps = [
+  'ASSIGNED',
+  'PICKUP_INSPECTION',
+  'IN_TRANSIT',
+  'DELIVERED',
+  'IN_PROGRESS',
+  'RETURN_INSPECTION',
+  'RETURN_IN_TRANSIT',
+  'RETURNED',
+  'COMPLETED',
+];
 export function BookingDetail({ id, user, navigate }) {
   const [version, setVersion] = useState(0),
     [code, setCode] = useState(''),
     [message, setMessage] = useState(''),
     [gps, setGps] = useState(false),
     [cancelQuote, setCancelQuote] = useState(null);
-  const { data: b, error } = useData(`/bookings/${id}`, version);
+  const { data: b, error } = useData(`/bookings/${id}`, version, true);
   const refresh = () => setVersion((v) => v + 1);
   useEffect(() => {
     const timer = setInterval(() => {
       if (document.visibilityState === 'visible') refresh();
-    }, 30000);
+    }, 5000);
     return () => clearInterval(timer);
   }, []);
   useEffect(() => {
@@ -144,6 +170,8 @@ export function BookingDetail({ id, user, navigate }) {
     };
   }, [gps]);
   const change = (status) => api(`/bookings/${id}/status`, { method: 'PATCH', body: { status } });
+  const assignment = b?.history.findLast((event) => event.toStatus === 'ASSIGNED');
+  const returning = ['RETURN_INSPECTION', 'RETURN_IN_TRANSIT', 'RETURNED'].includes(b?.status);
   return (
     <State data={b} error={error}>
       {b && (
@@ -224,9 +252,27 @@ export function BookingDetail({ id, user, navigate }) {
                       Generate handover code
                     </Action>
                   )}
-                  {user.role === 'FARMER' && code && <strong className="code">{code}</strong>}
+                  {user.role === 'OWNER' && b.status === 'RETURN_IN_TRANSIT' && (
+                    <Action
+                      run={() => api(`/bookings/${id}/handover-code`, { method: 'POST' })}
+                      done={(result) => setCode(result.code)}
+                    >
+                      Generate return handover code
+                    </Action>
+                  )}
+                  {code &&
+                    ((user.role === 'FARMER' && b.status === 'IN_TRANSIT') ||
+                      (user.role === 'OWNER' && b.status === 'RETURN_IN_TRANSIT')) && (
+                      <strong className="code">{code}</strong>
+                    )}
                   {user.role === 'DRIVER' &&
-                    ['ASSIGNED', 'PICKUP_INSPECTION', 'IN_TRANSIT'].includes(b.status) && (
+                    [
+                      'ASSIGNED',
+                      'PICKUP_INSPECTION',
+                      'IN_TRANSIT',
+                      'RETURN_INSPECTION',
+                      'RETURN_IN_TRANSIT',
+                    ].includes(b.status) && (
                       <Button secondary onClick={() => setGps(!gps)}>
                         {gps ? 'Stop sharing GPS' : 'Share my GPS'}
                       </Button>
@@ -263,12 +309,38 @@ export function BookingDetail({ id, user, navigate }) {
                   )}
                   {user.role === 'FARMER' && b.status === 'IN_PROGRESS' && (
                     <Action run={() => change('RETURN_INSPECTION')} done={refresh}>
-                      Request return inspection
+                      Request driver pickup
                     </Action>
                   )}
-                  {user.role === 'OWNER' && b.status === 'RETURN_INSPECTION' && (
+                  {user.role === 'DRIVER' && b.status === 'RETURN_INSPECTION' && (
+                    <Action run={() => change('RETURN_IN_TRANSIT')} done={refresh}>
+                      Start return to owner
+                    </Action>
+                  )}
+                  {user.role === 'DRIVER' && b.status === 'RETURN_IN_TRANSIT' && (
+                    <Form
+                      label="Confirm returned to owner"
+                      onSubmit={async (values) => {
+                        await api(`/bookings/${id}/status`, {
+                          method: 'PATCH',
+                          body: { status: 'RETURNED', code: values.code },
+                        });
+                        refresh();
+                      }}
+                    >
+                      <Field
+                        label="Owner’s return handover code"
+                        name="code"
+                        pattern="[0-9]{6}"
+                        inputMode="numeric"
+                        maxLength="6"
+                        required
+                      />
+                    </Form>
+                  )}
+                  {user.role === 'OWNER' && b.status === 'RETURNED' && (
                     <Action run={() => change('COMPLETED')} done={refresh}>
-                      Complete rental
+                      Confirm received and complete rental
                     </Action>
                   )}
                   {b.status === 'PAID' && <p>Advance received. Awaiting a verified delivery partner.</p>}
@@ -282,11 +354,35 @@ export function BookingDetail({ id, user, navigate }) {
               </Panel>
               {((user.role === 'DRIVER' && b.status === 'PICKUP_INSPECTION') ||
                 (user.role === 'FARMER' && b.status === 'DELIVERED') ||
-                (user.role === 'OWNER' && b.status === 'RETURN_INSPECTION')) && (
+                (user.role === 'DRIVER' && b.status === 'RETURN_INSPECTION')) && (
                 <Inspection booking={b} refresh={refresh} />
               )}
               {b.driver && (
-                <Panel title={user.role === 'DRIVER' ? 'Route & contacts' : 'Delivery location'}>
+                <Panel title={returning ? 'Live return journey' : 'Nearest-driver assignment'}>
+                  {assignment && (
+                    <div className="assignment-proof">
+                      <Badge>
+                        {assignment.note.startsWith('Nearest eligible driver:')
+                          ? 'Nearest verified match'
+                          : 'Driver assignment'}
+                      </Badge>
+                      <strong>{assignment.note}</strong>
+                      <div
+                        className="route-flow"
+                        aria-label={returning ? 'Driver to farm to owner' : 'Driver to owner to farm'}
+                      >
+                        {(returning
+                          ? ['Driver', 'Farmer pickup', 'Owner']
+                          : ['Driver', 'Owner pickup', 'Farm']
+                        ).map((label, index) => (
+                          <React.Fragment key={label}>
+                            {index > 0 && <span aria-hidden="true">→</span>}
+                            <b>{label}</b>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <Suspense fallback={<p>Loading map…</p>}>
                     <Map booking={b} />
                   </Suspense>
@@ -294,7 +390,8 @@ export function BookingDetail({ id, user, navigate }) {
                     {b.driver.locationUpdatedAt
                       ? `Last GPS update: ${when(b.driver.locationUpdatedAt)}`
                       : 'No live GPS update received.'}{' '}
-                    The dotted line indicates distance, not a road route.
+                    Live GPS refreshes every 5 seconds while this page is open. Lines show direct distance,
+                    not a road ETA.
                   </p>
                   {user.role === 'DRIVER' ? (
                     <div className="stack">
@@ -325,9 +422,13 @@ export function BookingDetail({ id, user, navigate }) {
                   <a
                     target="_blank"
                     rel="noreferrer"
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${b.farmLat},${b.farmLng}`}
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${
+                      returning
+                        ? `${b.machinery.latitude},${b.machinery.longitude}`
+                        : `${b.farmLat},${b.farmLng}`
+                    }`}
                   >
-                    Open road directions
+                    {returning ? 'Directions back to owner' : 'Open road directions'}
                   </a>
                 </Panel>
               )}

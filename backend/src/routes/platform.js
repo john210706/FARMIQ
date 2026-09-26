@@ -20,6 +20,7 @@ const {
   cancellation,
 } = require('../domain');
 const booking = require('../services/booking');
+const { demoMachines, demoDrivers, demoOperators, machineData } = require('../demo-data');
 const { calculateDistance } = require('../utils/geo');
 const admin = requireAuth(['ADMIN']),
   owner = requireAuth(['OWNER', 'ADMIN']);
@@ -43,7 +44,7 @@ const publicMachine = (m) => ({
 router.get('/capabilities', (req, res) =>
   res.json({
     payments: process.env.PAYMENT_MODE || 'sandbox',
-    sms: !!process.env.TWILIO_FROM,
+    sms: require('../services/outbox').configuration().enabled,
     ivr: !!process.env.PUBLIC_WEBHOOK_ORIGIN,
     ai: !!process.env.GEMINI_API_KEY && !!process.env.GEMINI_MODEL,
     version: '2.0',
@@ -73,7 +74,7 @@ router.get('/machinery/nearby', async (req, res) => {
         { description: { contains: q.search, mode: 'insensitive' } },
       ],
     },
-    include: { owner: true, bookings: { select: { reviews: { where: { hidden: false } } } } },
+    include: { owner: true },
     take: 200,
   });
   const results = [];
@@ -137,6 +138,81 @@ router.get('/tutorials', async (req, res) =>
   res.json(await prisma.tutorial.findMany({ where: { published: true } })),
 );
 router.use(requireAuth());
+const addressCache = new Map();
+let nextAddressLookup = 0;
+router.get('/location/address', async (req, res) => {
+  const point = z
+    .object({ latitude: z.coerce.number().min(-90).max(90), longitude: z.coerce.number().min(-180).max(180) })
+    .parse(req.query);
+  const key = `${point.latitude.toFixed(5)},${point.longitude.toFixed(5)}`;
+  const cached = addressCache.get(key);
+  if (cached) return res.json({ address: cached });
+  if (Date.now() < nextAddressLookup) fail(429, 'Address lookup is busy. Please try again shortly.');
+  nextAddressLookup = Date.now() + 1100;
+  const params = new URLSearchParams({ format: 'jsonv2', lat: point.latitude, lon: point.longitude });
+  const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`, {
+    headers: { 'User-Agent': 'FarmIQ/1.0 (equipment rental address lookup)' },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!response.ok) fail(503, 'Address lookup is unavailable. Please enter a nearby landmark.');
+  const result = await response.json();
+  if (!result.display_name) fail(404, 'No street address found. Please enter a nearby landmark.');
+  if (addressCache.size >= 500) addressCache.delete(addressCache.keys().next().value);
+  addressCache.set(key, result.display_name);
+  res.json({ address: result.display_name });
+});
+router.post('/demo/relocate', requireAuth(['FARMER']), async (req, res) => {
+  if (req.user.accountId !== 'DEMO-FARMER') fail(403, 'Demo relocation is unavailable');
+  const point = z.object({ latitude: lat, longitude: lng }).parse(req.body);
+  const owner = await prisma.user.findUnique({ where: { accountId: 'DEMO-OWNER' } });
+  const baseDriver = await prisma.user.findUnique({ where: { accountId: 'DEMO-DRIVER' } });
+  if (!owner || !baseDriver) fail(409, 'Run the demo seed before preparing nearby machinery');
+  await prisma.$transaction([
+    ...demoOperators.map((operator) => {
+      const data = { ...operator, active: true, verificationStatus: 'VERIFIED' };
+      return prisma.operator.upsert({ where: { id: operator.id }, create: data, update: data });
+    }),
+    ...demoMachines.map((machine) => {
+      const data = machineData(machine, owner.id, point.latitude, point.longitude);
+      return prisma.machinery.upsert({
+        where: { id: machine.id },
+        update: data,
+        create: { id: machine.id, ...data },
+      });
+    }),
+    ...demoDrivers.map(([accountId, fullName, phone, latOffset, lngOffset]) =>
+      prisma.user.upsert({
+        where: { accountId },
+        update: {
+          latitude: point.latitude + latOffset,
+          longitude: point.longitude + lngOffset,
+          locationUpdatedAt: new Date(),
+          onDuty: true,
+          active: true,
+          verificationStatus: 'VERIFIED',
+        },
+        create: {
+          accountId,
+          fullName,
+          phone,
+          role: 'DRIVER',
+          passwordHash: baseDriver.passwordHash,
+          latitude: point.latitude + latOffset,
+          longitude: point.longitude + lngOffset,
+          locationUpdatedAt: new Date(),
+          onDuty: true,
+          verificationStatus: 'VERIFIED',
+        },
+      }),
+    ),
+    prisma.setting.upsert({
+      where: { key: 'dispatch' },
+      update: { value: { enabled: true, radiusKm: 30, horizonHours: 48 } },
+      create: { key: 'dispatch', value: { enabled: true, radiusKm: 30, horizonHours: 48 } },
+    }),
+  ]);
+  res.json({ ok: true, machineCount: demoMachines.length, driverReady: true });
+});
 router.get('/bookings', requireAuth(['FARMER', 'OWNER', 'ADMIN']), async (req, res) =>
   res.json(
     (
@@ -163,6 +239,8 @@ router.get('/rides', requireAuth(['FARMER', 'OWNER', 'ADMIN']), async (req, res)
               'DELIVERED',
               'IN_PROGRESS',
               'RETURN_INSPECTION',
+              'RETURN_IN_TRANSIT',
+              'RETURNED',
             ],
           },
         },
@@ -240,9 +318,10 @@ router.post('/bookings/:id/reschedule', requireAuth(['FARMER', 'ADMIN']), async 
 router.get('/bookings/:id/cancellation', async (req, res) =>
   res.json(cancellation(await booking.get(prisma, req.params.id, req.user))),
 );
-router.post('/bookings/:id/handover-code', requireAuth(['FARMER']), async (req, res) => {
+router.post('/bookings/:id/handover-code', requireAuth(['FARMER', 'OWNER']), async (req, res) => {
   const b = await booking.get(prisma, req.params.id, req.user);
-  if (b.status !== 'IN_TRANSIT') fail(409, 'Generate the code when the driver is on the way');
+  const stage = req.user.role === 'OWNER' ? 'RETURN_IN_TRANSIT' : 'IN_TRANSIT';
+  if (b.status !== stage) fail(409, 'Generate the code when the driver is on the way');
   const code = String(crypto.randomInt(100000, 1000000));
   await prisma.booking.update({ where: { id: b.id }, data: { handoverCodeHash: digest(code) } });
   res.json({ code });
@@ -254,7 +333,7 @@ router.post('/bookings/:id/inspections', async (req, res) => {
     const allowed = {
       PICKUP: ['PICKUP_INSPECTION', 'DRIVER'],
       DELIVERY: ['DELIVERED', 'FARMER'],
-      RETURN: ['RETURN_INSPECTION', 'OWNER'],
+      RETURN: ['RETURN_INSPECTION', 'DRIVER'],
     }[i.stage];
     if (b.status !== allowed[0] || (req.user.role !== allowed[1] && req.user.role !== 'ADMIN'))
       fail(409, 'Inspection is not available at this stage');
@@ -303,7 +382,14 @@ router.get('/driver/deliveries', requireAuth(['DRIVER', 'ADMIN']), async (req, r
 router.patch('/drivers/location', requireAuth(['DRIVER']), async (req, res) => {
   const i = z.object({ latitude: lat, longitude: lng }).parse(req.body);
   await prisma.user.update({ where: { id: req.user.id }, data: { ...i, locationUpdatedAt: new Date() } });
-  res.json({ ok: true });
+  const admin = await prisma.user.findFirst({
+    where: { role: 'ADMIN', active: true },
+    orderBy: { id: 'asc' },
+  });
+  const dispatch = admin
+    ? await require('../services/dispatch').run(admin)
+    : { assigned: [], enabled: false };
+  res.json({ ok: true, dispatch });
 });
 router.get('/owner/machinery', owner, async (req, res) =>
   res.json(
@@ -393,6 +479,9 @@ router.delete('/favourites/:id', requireAuth(['FARMER', 'OWNER', 'ADMIN']), asyn
   await prisma.favourite.deleteMany({ where: { userId: req.user.id, machineryId: req.params.id } });
   res.json({ ok: true });
 });
+router.get('/notifications/unread-count', async (req, res) =>
+  res.json({ count: await prisma.notification.count({ where: { userId: req.user.id, readAt: null } }) }),
+);
 router.get('/notifications', async (req, res) =>
   res.json(
     await prisma.notification.findMany({
@@ -408,6 +497,13 @@ router.patch('/notifications/:id', async (req, res) => {
     data: { readAt: new Date() },
   });
   res.json({ ok: true });
+});
+router.post('/notifications/read-all', async (req, res) => {
+  const result = await prisma.notification.updateMany({
+    where: { userId: req.user.id, readAt: null },
+    data: { readAt: new Date() },
+  });
+  res.json({ updated: result.count });
 });
 router.get('/tickets', async (req, res) =>
   res.json(
@@ -723,7 +819,17 @@ router.post('/admin/bookings/:id/assign', admin, async (req, res) => {
       await tx.booking.count({
         where: {
           driverId,
-          status: { in: ['ASSIGNED', 'PICKUP_INSPECTION', 'IN_TRANSIT', 'DELIVERED', 'RETURN_INSPECTION'] },
+          status: {
+            in: [
+              'ASSIGNED',
+              'PICKUP_INSPECTION',
+              'IN_TRANSIT',
+              'DELIVERED',
+              'RETURN_INSPECTION',
+              'RETURN_IN_TRANSIT',
+              'RETURNED',
+            ],
+          },
           id: { not: b.id },
         },
       })

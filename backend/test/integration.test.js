@@ -70,6 +70,28 @@ test(
         .send({ accountId: u.user.accountId, password: 'SecurePassword123' });
       u.token = login.body.token;
     }
+    assert.equal((await request(app).get('/api/location/address?latitude=10&longitude=79')).status, 401);
+    assert.equal(
+      (await call(farmer.token, 'get', '/location/address?latitude=999&longitude=79')).status,
+      400,
+    );
+    const originalFetch = global.fetch;
+    let addressRequests = 0;
+    global.fetch = async (url) => {
+      assert.equal(new URL(url).hostname, 'nominatim.openstreetmap.org');
+      addressRequests++;
+      return { ok: true, json: async () => ({ display_name: 'Test farm, Thanjavur, Tamil Nadu' }) };
+    };
+    try {
+      for (let repeat = 0; repeat < 2; repeat++) {
+        const address = await call(farmer.token, 'get', '/location/address?latitude=10.79&longitude=79.13');
+        assert.equal(address.status, 200);
+        assert.equal(address.body.address, 'Test farm, Thanjavur, Tamil Nadu');
+      }
+      assert.equal(addressRequests, 1, 'Repeated locations use the address cache');
+    } finally {
+      global.fetch = originalFetch;
+    }
     await call(driver.token, 'patch', '/auth/me', { onDuty: true });
     const input = {
       name: 'Test tractor',
@@ -119,6 +141,10 @@ test(
     const winner = race[0].status === 201 ? farmer : other;
     const outsider = winner === farmer ? other : farmer;
     const b = race.find((r) => r.status === 201).body;
+    assert.ok(
+      await prisma.notification.findFirst({ where: { bookingId: b.id, userId: owner.user.id } }),
+      'owner must be notified when a farmer requests equipment',
+    );
     const replay = { ...inputBooking, requestKey: b.requestKey };
     assert.equal(
       (await call(outsider.token, 'post', '/bookings', { ...replay, farmerId: winner.user.id })).status,
@@ -185,6 +211,10 @@ test(
     assert.equal(driverDetail.status, 200);
     assert.equal(driverDetail.body.agreementVersion, undefined);
     assert.equal(driverDetail.body.advanceAmount, undefined);
+    assert.ok(
+      await prisma.notification.findFirst({ where: { bookingId: b.id, userId: driver.user.id } }),
+      'assigned driver must receive an in-app notification',
+    );
     assert.equal(
       (await call(driver.token, 'patch', `/bookings/${b.id}/status`, { status: 'PICKUP_INSPECTION' })).status,
       200,
@@ -261,7 +291,51 @@ test(
       (await call(winner.token, 'patch', `/bookings/${b.id}/status`, { status: 'RETURN_INSPECTION' })).status,
       200,
     );
-    await inspect(owner, 'RETURN');
+    assert.equal(
+      (await call(driver.token, 'patch', `/bookings/${b.id}/status`, { status: 'RETURN_IN_TRANSIT' })).status,
+      409,
+    );
+    await inspect(driver, 'RETURN');
+    assert.equal(
+      (await call(driver.token, 'patch', `/bookings/${b.id}/status`, { status: 'RETURN_IN_TRANSIT' })).status,
+      200,
+    );
+    await call(driver.token, 'patch', '/drivers/location', { latitude: 10.79, longitude: 79.13 });
+    assert.equal((await call(driver.token, 'post', `/bookings/${b.id}/handover-code`, {})).status, 403);
+    assert.equal((await call(winner.token, 'post', `/bookings/${b.id}/handover-code`, {})).status, 409);
+    assert.equal((await call(outsider.token, 'post', `/bookings/${b.id}/handover-code`, {})).status, 404);
+    const returnCode = await call(owner.token, 'post', `/bookings/${b.id}/handover-code`, {});
+    assert.equal(returnCode.status, 200);
+    assert.equal(
+      (await call(driver.token, 'patch', `/bookings/${b.id}/status`, { status: 'RETURNED', code: '000000' }))
+        .status,
+      400,
+    );
+    await call(driver.token, 'patch', '/drivers/location', { latitude: 12, longitude: 80 });
+    assert.equal(
+      (
+        await call(driver.token, 'patch', `/bookings/${b.id}/status`, {
+          status: 'RETURNED',
+          code: returnCode.body.code,
+        })
+      ).status,
+      409,
+    );
+    await call(driver.token, 'patch', '/drivers/location', { latitude: 10.79, longitude: 79.13 });
+    assert.equal(
+      (
+        await call(driver.token, 'patch', `/bookings/${b.id}/status`, {
+          status: 'RETURNED',
+          code: returnCode.body.code,
+        })
+      ).status,
+      200,
+    );
+    assert.equal((await prisma.booking.findUnique({ where: { id: b.id } })).handoverCodeHash, null);
+    const unreadCount = await call(owner.token, 'get', '/notifications/unread-count');
+    assert.ok(unreadCount.body.count > 0);
+    await call(owner.token, 'post', '/notifications/read-all', {});
+    assert.equal((await call(owner.token, 'get', '/notifications/unread-count')).body.count, 0);
     assert.equal(
       (await call(owner.token, 'patch', `/bookings/${b.id}/status`, { status: 'COMPLETED' })).status,
       200,
@@ -337,6 +411,14 @@ test(
     assert.equal(
       await prisma.bookingEvent.count({ where: { bookingId: dispatchBooking.id, toStatus: 'ASSIGNED' } }),
       1,
+    );
+    assert.match(
+      (
+        await prisma.bookingEvent.findFirst({
+          where: { bookingId: dispatchBooking.id, toStatus: 'ASSIGNED' },
+        })
+      ).note,
+      /Nearest eligible driver: .* km from owner pickup; selected from \d+ available candidate/,
     );
     const message = await prisma.messageOutbox.findFirst({ where: { userId: driver.user.id } });
     assert.ok(message, 'newly allocated driver must receive notification');

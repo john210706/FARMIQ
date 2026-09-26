@@ -8,9 +8,11 @@ const busyStatuses = [
   'DELIVERED',
   'IN_PROGRESS',
   'RETURN_INSPECTION',
+  'RETURN_IN_TRANSIT',
+  'RETURNED',
   'DISPUTED',
 ];
-const defaults = { enabled: false, radiusKm: 30, horizonHours: 24 };
+const defaults = { enabled: true, radiusKm: 30, horizonHours: 24 };
 async function run(actor) {
   const setting = await prisma.setting.findUnique({ where: { key: 'dispatch' } });
   const options = { ...defaults, ...setting?.value };
@@ -74,7 +76,7 @@ async function run(actor) {
         b,
         actor,
         'ASSIGNED',
-        'Automatically allocated to nearest eligible available driver',
+        `Nearest eligible driver: ${driver.distance.toFixed(1)} km from owner pickup; selected from ${candidates.length} available candidate${candidates.length === 1 ? '' : 's'}`,
         { driverId: driver.id },
       );
       return { bookingId: b.id, driverId: driver.id, distanceKm: Math.round(driver.distance * 10) / 10 };
@@ -83,4 +85,11 @@ async function run(actor) {
   }
   return { assigned, enabled: true };
 }
-module.exports = { run, defaults };
+async function trigger() {
+  const admin = await prisma.user.findFirst({
+    where: { role: 'ADMIN', active: true },
+    orderBy: { id: 'asc' },
+  });
+  return admin ? run(admin) : { assigned: [], enabled: false };
+}
+module.exports = { run, trigger, defaults };

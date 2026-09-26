@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { api } from './lib/api';
 import { tr } from './i18n';
-export function useData(path, version = 0) {
+export function useData(path, version = 0, retainPrevious = false) {
   const [data, setData] = useState(null),
     [error, setError] = useState('');
   useEffect(() => {
     let live = true;
-    setData(null);
+    if (!retainPrevious) setData(null);
     setError('');
     if (!path) return;
     api(path)
@@ -15,7 +15,7 @@ export function useData(path, version = 0) {
     return () => {
       live = false;
     };
-  }, [path, version]);
+  }, [path, version, retainPrevious]);
   return { data, error, setData };
 }
 export function State({ data, error, children }) {

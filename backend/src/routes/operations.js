@@ -117,4 +117,18 @@ router.post('/operations/dispatch/run', async (req, res) => res.json(await dispa
 router.get('/operations/messages', async (req, res) =>
   res.json(await prisma.messageOutbox.findMany({ orderBy: { createdAt: 'desc' }, take: 100 })),
 );
+router.get('/operations/messaging-status', async (req, res) => {
+  const outbox = require('../services/outbox');
+  const grouped = await prisma.messageOutbox.groupBy({ by: ['status'], _count: { _all: true } });
+  res.json({
+    ...outbox.configuration(),
+    queue: Object.fromEntries(grouped.map((row) => [row.status, row._count._all])),
+    optedInUsers: await prisma.user.count({
+      where: { active: true, preferences: { path: ['sms'], equals: true } },
+    }),
+  });
+});
+router.post('/operations/messages/process', async (req, res) =>
+  res.json(await require('../services/outbox').run()),
+);
 module.exports = router;

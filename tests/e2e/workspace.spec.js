@@ -66,13 +66,23 @@ test('driver account is limited to its delivery workspace', async ({ page }) => 
   await expect(page.getByText('Low-data mode (hide catalogue photos)')).toHaveCount(0);
   await expect(page.getByRole('option', { name: 'OWNERSHIP' })).toHaveCount(0);
 });
-test('real account sign-in shows working scoped dashboard and can sign out', async ({ page }, testInfo) => {
+test('real account sign-in shows working scoped dashboard and can sign out', async ({
+  page,
+  context,
+}, testInfo) => {
   test.skip(!process.env.E2E_WITH_API, 'Requires isolated database and demo seed');
+  await context.grantPermissions(['geolocation'], { origin: new URL(testInfo.project.use.baseURL).origin });
+  await context.setGeolocation({ latitude: 12.9716, longitude: 77.5946 });
+  await page.route('**/api/location/address?*', (route) =>
+    route.fulfill({ json: { address: 'Demo farm, Bengaluru, Karnataka, India' } }),
+  );
+  await page.route('**/api/notifications/unread-count', (route) => route.fulfill({ json: { count: 3 } }));
   await page.goto('/');
   await page.getByLabel('Mobile number or account ID').fill('DEMO-FARMER');
   await page.getByLabel('Password', { exact: true }).fill('FarmIQ-demo-2026');
   await page.getByRole('button', { name: 'Sign in', exact: true }).last().click();
   await expect(page.getByRole('heading', { name: 'Hello, Ravi.' })).toBeVisible();
+  await expect(page.locator('.header .notification-count')).toHaveText('3');
   await page.getByRole('combobox', { name: 'Language', exact: true }).selectOption('ta');
   await expect(page.getByRole('heading', { name: 'வணக்கம், Ravi.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'முன்பதிவுகள்' }).first()).toBeVisible();
@@ -89,8 +99,29 @@ test('real account sign-in shows working scoped dashboard and can sign out', asy
   ).toEqual([]);
   await page.goto('/#catalog');
   await expect(page.getByRole('heading', { name: 'Mahindra 575 DI', exact: true })).toBeVisible();
+  await expect(page.getByText('9 nearby demo machines are ready to book.')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.machine-card')).toHaveCount(9);
   await page.getByRole('button', { name: 'View & request' }).first().click();
-  await expect(page.getByRole('heading', { name: 'Plan your rental' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Plan your rental' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.detail-photo')).toHaveAttribute(
+    'src',
+    /\/machinery\/demo-(tractor|harvester|rotavator)\.webp/,
+  );
+  await expect(page.getByLabel('Latitude')).toHaveCount(0);
+  await expect(page.getByLabel('Longitude')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /farm location|current location/i })).toBeVisible();
+  await expect(
+    page.getByText('Demo machinery and the nearest delivery partner are ready near your farm.'),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByLabel('Farm address', { exact: true })).toHaveValue(
+    'Demo farm, Bengaluru, Karnataka, India',
+  );
+  await expect(page.getByLabel('Verified operator').locator('option')).toHaveCount(2);
+  await page.getByLabel('Verified operator').selectOption({ index: 1 });
+  await page.getByRole('button', { name: 'Update current location', exact: true }).click();
+  await expect(page.getByLabel('Farm address', { exact: true })).toHaveValue(
+    'Demo farm, Bengaluru, Karnataka, India',
+  );
   await page.getByRole('button', { name: 'Calculate exact quote' }).click();
   await expect(page.getByText('50% advance', { exact: true })).toBeVisible();
   await page.goto('/#account');

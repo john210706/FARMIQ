@@ -1,5 +1,18 @@
 const { prisma } = require('../config');
 const rank = { queued: 1, sending: 2, sent: 3, failed: 4, undelivered: 4, delivered: 5, read: 6 };
+function configuration() {
+  const checks = {
+    SMS_OUTBOX_ENABLED: process.env.SMS_OUTBOX_ENABLED === 'true',
+    TWILIO_ACCOUNT_SID: !!process.env.TWILIO_ACCOUNT_SID,
+    TWILIO_AUTH_TOKEN: !!process.env.TWILIO_AUTH_TOKEN,
+    TWILIO_FROM: !!process.env.TWILIO_FROM,
+    PUBLIC_WEBHOOK_ORIGIN: /^https:\/\//.test(process.env.PUBLIC_WEBHOOK_ORIGIN || ''),
+  };
+  return {
+    enabled: Object.values(checks).every(Boolean),
+    missing: Object.keys(checks).filter((key) => !checks[key]),
+  };
+}
 async function receipt(id, sid, status, error) {
   if (!rank[status] || !/^SM[a-f0-9]{32}$/i.test(sid || '')) return;
   const current = await prisma.messageOutbox.findUnique({ where: { id } });
@@ -50,17 +63,7 @@ async function send(row, user) {
   return { status: 'QUEUED', providerReference: result.sid };
 }
 async function run(transport = send) {
-  if (
-    transport === send &&
-    !(
-      process.env.SMS_OUTBOX_ENABLED === 'true' &&
-      process.env.TWILIO_ACCOUNT_SID &&
-      process.env.TWILIO_AUTH_TOKEN &&
-      process.env.TWILIO_FROM &&
-      /^https:\/\//.test(process.env.PUBLIC_WEBHOOK_ORIGIN || '')
-    )
-  )
-    return { enabled: false, processed: 0 };
+  if (transport === send && !configuration().enabled) return { enabled: false, processed: 0 };
   await prisma.messageOutbox.updateMany({
     where: { status: 'SENDING', updatedAt: { lt: new Date(Date.now() - 120000) } },
     data: { status: 'UNKNOWN', error: 'Interrupted send; inspect provider before any resend' },
@@ -105,4 +108,4 @@ async function run(transport = send) {
   }
   return { enabled: true, processed };
 }
-module.exports = { run, receipt };
+module.exports = { run, receipt, configuration };

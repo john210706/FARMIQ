@@ -242,7 +242,7 @@ async function transition(user, id, next, note = '', code = '') {
       await available(tx, b.machineryId, b.scheduledAt, b.endsAt, b.id);
       data.holdExpiresAt = new Date(Date.now() + 30 * 60000);
     }
-    const stage = { IN_TRANSIT: 'PICKUP', IN_PROGRESS: 'DELIVERY', COMPLETED: 'RETURN' }[next];
+    const stage = { IN_TRANSIT: 'PICKUP', IN_PROGRESS: 'DELIVERY', RETURN_IN_TRANSIT: 'RETURN' }[next];
     if (stage && !b.inspections.some((i) => i.stage === stage))
       fail(409, `Complete the ${stage.toLowerCase()} inspection first`);
     if (next === 'DELIVERED') {
@@ -257,6 +257,23 @@ async function transition(user, id, next, note = '', code = '') {
         fail(409, 'Send a fresh GPS location within 500 metres of the farm');
       data.handoverCodeHash = null;
     }
+    if (next === 'RETURNED') {
+      if (!b.handoverCodeHash || digest(code) !== b.handoverCodeHash)
+        fail(400, 'Ask the owner for the valid return handover code');
+      data.handoverCodeHash = null;
+    }
+    if (
+      next === 'RETURNED' &&
+      user.role !== 'ADMIN' &&
+      (user.latitude == null ||
+        user.longitude == null ||
+        b.machinery.latitude == null ||
+        b.machinery.longitude == null ||
+        !user.locationUpdatedAt ||
+        Date.now() - user.locationUpdatedAt > 300000 ||
+        calculateDistance(user.latitude, user.longitude, b.machinery.latitude, b.machinery.longitude) > 0.5)
+    )
+      fail(409, 'Send a fresh GPS location within 500 metres of the owner pickup point');
     if (next === 'IN_PROGRESS' && !b.transactions.some((t) => t.kind === 'BALANCE' && t.status === 'PAID'))
       fail(409, 'Settle the remaining balance first');
     if (next === 'CANCELLED') {

@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { api, money, when } from '../lib/api';
 import { useData, State, Panel, Field, Action, Form, Button, Badge, Empty } from '../ui';
 import { localeFor } from '../i18n';
+import { LocationPicker } from '../location';
 export default function Community({ user, navigate }) {
   const [recommendations, setRecommendations] = useState(null),
     [weather, setWeather] = useState(null),
+    [weatherLocation, setWeatherLocation] = useState(null),
     [v, setV] = useState(0);
   const { data: groups, error } = useData('/groups', v);
   const refresh = () => setV((v) => v + 1);
@@ -64,30 +66,17 @@ export default function Community({ user, navigate }) {
         <Panel title="Seven-day field forecast">
           <Form
             label="Check forecast"
-            onSubmit={async (v) => setWeather(await api('/weather?' + new URLSearchParams(v)))}
+            onSubmit={async () => {
+              if (!weatherLocation) throw new Error('Capture the farm location before checking the forecast');
+              setWeather(
+                await api(
+                  '/weather?' +
+                    new URLSearchParams({ lat: weatherLocation.latitude, lng: weatherLocation.longitude }),
+                ),
+              );
+            }}
           >
-            <div className="two">
-              <Field
-                label="Farm latitude"
-                name="lat"
-                type="number"
-                step="any"
-                min="-90"
-                max="90"
-                defaultValue="10.7905"
-                required
-              />
-              <Field
-                label="Farm longitude"
-                name="lng"
-                type="number"
-                step="any"
-                min="-180"
-                max="180"
-                defaultValue="79.1378"
-                required
-              />
-            </div>
+            <LocationPicker value={weatherLocation} onChange={setWeatherLocation} label="Use farm location" />
           </Form>
           {weather && (
             <>

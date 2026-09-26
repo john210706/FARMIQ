@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { api, upload, openDocument, money, when } from '../lib/api';
 import { useData, State, Panel, Field, Action, Form, Badge, Button } from '../ui';
+import { currentLocation, LocationPicker } from '../location';
 export default function Account({ user, onUser, onLogout, navigate }) {
   const [v, setV] = useState(0),
-    [notice, setNotice] = useState('');
+    [notice, setNotice] = useState(''),
+    [addressText, setAddressText] = useState(''),
+    [addressLocation, setAddressLocation] = useState(null);
   const refresh = () => setV((v) => v + 1);
   const isDriver = user.role === 'DRIVER';
   const { data: addresses } = useData(isDriver ? null : '/addresses', v);
@@ -28,6 +31,8 @@ export default function Account({ user, onUser, onLogout, navigate }) {
         <Panel title="Profile & preferences">
           <Form
             onSubmit={async (v) => {
+              const onDuty = isDriver && v.onDuty === 'on';
+              const driverLocation = onDuty ? await currentLocation() : null;
               onUser(
                 await api('/auth/me', {
                   method: 'PATCH',
@@ -38,11 +43,12 @@ export default function Account({ user, onUser, onLogout, navigate }) {
                       sms: v.sms === 'on',
                       ...(!isDriver ? { lowData: v.lowData === 'on' } : {}),
                     },
-                    ...(user.role === 'DRIVER' ? { onDuty: v.onDuty === 'on' } : {}),
+                    ...(isDriver ? { onDuty } : {}),
                   },
                 }),
               );
-              setNotice('Profile saved');
+              if (driverLocation) await api('/drivers/location', { method: 'PATCH', body: driverLocation });
+              setNotice(onDuty ? 'Profile saved and current driver location shared' : 'Profile saved');
             }}
           >
             <Field label="Full name" name="fullName" defaultValue={user.fullName} required />
@@ -113,28 +119,33 @@ export default function Account({ user, onUser, onLogout, navigate }) {
           <Form
             label="Save address"
             onSubmit={async (v, f) => {
+              if (!addressLocation) throw new Error('Capture the farm location before saving this address');
               await api('/addresses', {
                 method: 'POST',
-                body: { ...v, latitude: Number(v.latitude), longitude: Number(v.longitude) },
+                body: { ...v, ...addressLocation },
               });
               f.reset();
+              setAddressLocation(null);
+              setAddressText('');
               refresh();
             }}
           >
             <div className="two">
               <Field label="Label" name="label" required />
-              <Field label="Full address" name="address" required />
-              <Field label="Latitude" name="latitude" type="number" step="any" min="-90" max="90" required />
               <Field
-                label="Longitude"
-                name="longitude"
-                type="number"
-                step="any"
-                min="-180"
-                max="180"
+                label="Full address"
+                name="address"
+                value={addressText}
+                onChange={(event) => setAddressText(event.target.value)}
                 required
               />
             </div>
+            <LocationPicker
+              value={addressLocation}
+              onChange={setAddressLocation}
+              onAddress={setAddressText}
+              label="Capture farm location"
+            />
           </Form>
           {addresses?.map((a) => (
             <div className="list-row" key={a.id}>

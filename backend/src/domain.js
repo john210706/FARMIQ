@@ -13,6 +13,8 @@ const activeStatuses = [
   'DELIVERED',
   'IN_PROGRESS',
   'RETURN_INSPECTION',
+  'RETURN_IN_TRANSIT',
+  'RETURNED',
   'DISPUTED',
 ];
 const transitions = {
@@ -24,7 +26,9 @@ const transitions = {
   IN_TRANSIT: { DELIVERED: ['DRIVER'] },
   DELIVERED: { IN_PROGRESS: ['FARMER'] },
   IN_PROGRESS: { RETURN_INSPECTION: ['FARMER'] },
-  RETURN_INSPECTION: { COMPLETED: ['OWNER'] },
+  RETURN_INSPECTION: { RETURN_IN_TRANSIT: ['DRIVER'] },
+  RETURN_IN_TRANSIT: { RETURNED: ['DRIVER'] },
+  RETURNED: { COMPLETED: ['OWNER'] },
 };
 function canAccess(user, booking) {
   return (

@@ -35,6 +35,7 @@ router.post('/payments/webhook', async (req, res) => {
     if (p.status !== 'captured') fail(400, 'Payment is not captured');
     await booking.settle(tx, t, { id: 'razorpay-webhook' });
   });
+  await require('../services/dispatch').trigger();
   res.json({ received: true });
 });
 router.post('/bookings/:id/payments', requireAuth(['FARMER', 'ADMIN']), async (req, res) => {
@@ -83,8 +84,14 @@ router.post('/bookings/:id/payments', requireAuth(['FARMER', 'ADMIN']), async (r
     }
     return created;
   });
+  if ((mode === 'sandbox' || t.status === 'PAID') && kind === 'ADVANCE')
+    await require('../services/dispatch').trigger();
   if (mode === 'sandbox' || t.status === 'PAID')
-    return res.json({ transaction: t, mode, message: mode==='sandbox'?'Sandbox only; no money transferred.':'Payment already confirmed.' });
+    return res.json({
+      transaction: t,
+      mode,
+      message: mode === 'sandbox' ? 'Sandbox only; no money transferred.' : 'Payment already confirmed.',
+    });
   if (!t.providerReference) {
     // Orders are created once under a row lock; callbacks alone never confirm payment.
     await prisma.$transaction(

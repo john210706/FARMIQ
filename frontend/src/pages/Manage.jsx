@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import Operations, { Finance } from './Operations';
 import { api, money, when, openDocument } from '../lib/api';
 import { useData, State, Panel, Field, Button, Action, Form, Badge, Empty } from '../ui';
+import { LocationPicker } from '../location';
 export default function Fleet() {
   const [version, setVersion] = useState(0),
     [edit, setEdit] = useState(null),
-    [adding, setAdding] = useState(false);
+    [adding, setAdding] = useState(false),
+    [pickupAddress, setPickupAddress] = useState(''),
+    [pickupLocation, setPickupLocation] = useState(null);
   const { data, error } = useData('/owner/machinery', version);
   const refresh = () => setVersion((v) => v + 1);
   return (
@@ -20,6 +23,8 @@ export default function Fleet() {
         onClick={() => {
           setAdding(!adding);
           setEdit(null);
+          setPickupLocation(null);
+          setPickupAddress('');
         }}
       >
         Add machinery
@@ -30,13 +35,13 @@ export default function Fleet() {
             key={edit?.id || 'new'}
             label="Save for verification"
             onSubmit={async (v) => {
+              if (!pickupLocation) throw new Error('Capture the machinery pickup location before saving');
               const body = {
                 ...v,
                 pricePerHour: Number(v.pricePerHour),
                 pricePerDay: v.pricePerDay ? Number(v.pricePerDay) : null,
                 horsepower: Number(v.horsepower),
-                latitude: Number(v.latitude),
-                longitude: Number(v.longitude),
+                ...pickupLocation,
                 deliveryRadiusKm: Number(v.deliveryRadiusKm),
                 deposit: 0,
                 fuelLitresPerHour: Number(v.fuelLitresPerHour),
@@ -62,12 +67,18 @@ export default function Fleet() {
               {[
                 ['name', 'Machine name'],
                 ['brand', 'Brand'],
-                ['location', 'Pickup address'],
                 ['fuelType', 'Fuel type'],
                 ['imageUrl', 'Main photo HTTPS URL'],
               ].map(([name, label]) => (
                 <Field key={name} label={label} name={name} defaultValue={edit?.[name] || ''} required />
               ))}
+              <Field
+                label="Pickup address"
+                name="location"
+                value={pickupAddress}
+                onChange={(event) => setPickupAddress(event.target.value)}
+                required
+              />
               <Field label="Category">
                 <select name="category" defaultValue={edit?.category || 'TRACTOR'}>
                   {['TRACTOR', 'HARVESTER', 'TILLAGE', 'SPRAYER', 'TRANSPLANTER', 'THRESHER', 'BALER'].map(
@@ -81,8 +92,6 @@ export default function Fleet() {
                 ['pricePerHour', 'Hourly price', 1000],
                 ['pricePerDay', '8-hour price', 7000],
                 ['horsepower', 'Horsepower', 45],
-                ['latitude', 'Pickup latitude', 10.79],
-                ['longitude', 'Pickup longitude', 79.13],
                 ['deliveryRadiusKm', 'Delivery radius (km)', 30],
                 ['fuelLitresPerHour', 'Estimated litres/hour', 4],
                 ['acresPerHour', 'Estimated acres/hour', 1],
@@ -98,6 +107,12 @@ export default function Fleet() {
                 />
               ))}
             </div>
+            <LocationPicker
+              value={pickupLocation}
+              onChange={setPickupLocation}
+              onAddress={setPickupAddress}
+              label="Capture machinery pickup location"
+            />
             <Field label="Description">
               <textarea name="description" defaultValue={edit?.description || ''} required />
             </Field>
@@ -123,7 +138,11 @@ export default function Fleet() {
                     secondary
                     onClick={() => {
                       setEdit(m);
+                      setPickupAddress(m.location || '');
                       setAdding(false);
+                      setPickupLocation(
+                        m.latitude != null ? { latitude: m.latitude, longitude: m.longitude } : null,
+                      );
                     }}
                   >
                     Edit
@@ -230,7 +249,9 @@ export default function Fleet() {
 export function Admin() {
   const [tab, setTab] = useState('users'),
     [version, setVersion] = useState(0),
-    [notice, setNotice] = useState('');
+    [notice, setNotice] = useState(''),
+    [assistedAddress, setAssistedAddress] = useState(''),
+    [assistedLocation, setAssistedLocation] = useState(null);
   const refresh = () => setVersion((v) => v + 1);
   const paths = {
     users: '/admin/users',
@@ -592,6 +613,7 @@ export function Admin() {
         <Form
           label="Create assisted request"
           onSubmit={async (v, f) => {
+            if (!assistedLocation) throw new Error('Capture the farm location before creating the request');
             await api('/bookings', {
               method: 'POST',
               body: {
@@ -600,8 +622,8 @@ export function Admin() {
                 scheduledAt: new Date(v.scheduledAt).toISOString(),
                 durationHours: Number(v.durationHours),
                 farmAddress: v.farmAddress,
-                farmLat: Number(v.farmLat),
-                farmLng: Number(v.farmLng),
+                farmLat: assistedLocation.latitude,
+                farmLng: assistedLocation.longitude,
                 agreementAccepted: v.consent === 'on',
                 assistedConsent: v.consent === 'on',
                 requestKey: crypto.randomUUID(),
@@ -609,6 +631,7 @@ export function Admin() {
             });
             setNotice('Assisted request created');
             f.reset();
+            setAssistedLocation(null);
             refresh();
           }}
         >
@@ -616,19 +639,26 @@ export function Admin() {
             {[
               ['farmerId', 'Farmer ID'],
               ['machineryId', 'Machine ID'],
-              ['farmAddress', 'Farm address'],
             ].map(([name, label]) => (
               <Field key={name} label={label} name={name} required />
             ))}
+            <Field
+              label="Farm address"
+              name="farmAddress"
+              value={assistedAddress}
+              onChange={(event) => setAssistedAddress(event.target.value)}
+              required
+            />
             <Field label="Start" name="scheduledAt" type="datetime-local" required />
-            {[
-              ['durationHours', 'Hours'],
-              ['farmLat', 'Latitude'],
-              ['farmLng', 'Longitude'],
-            ].map(([name, label]) => (
-              <Field key={name} label={label} name={name} type="number" step="any" required />
-            ))}
+            <Field label="Hours" name="durationHours" type="number" min="1" max="48" required />
           </div>
+          <LocationPicker
+            value={assistedLocation}
+            onChange={setAssistedLocation}
+            onAddress={setAssistedAddress}
+            label="Capture farmer location"
+            automatic={false}
+          />
           <label className="check">
             <input type="checkbox" name="consent" required />
             The farmer has explicitly consented to the request and rental agreement.

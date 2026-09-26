@@ -24,6 +24,7 @@ import Community from './pages/Community';
 import Learning from './pages/Learning';
 import './workspace.css';
 import { Localizer } from './i18n';
+import { currentLocation } from './location';
 const labels = {
   en: {
     dashboard: 'Overview',
@@ -141,6 +142,35 @@ export default function Workspace() {
     localStorage.setItem('farmiq-language', language);
   }, [language]);
   const user = session?.user;
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setUnread(0);
+    if (!user?.id) return;
+    const refreshUnread = () => {
+      if (document.visibilityState !== 'visible') return;
+      api('/notifications/unread-count')
+        .then((result) => {
+          if (active) setUnread(result.count);
+        })
+        .catch(() => {});
+    };
+    refreshUnread();
+    const timer = setInterval(refreshUnread, 15000);
+    window.addEventListener('notifications-changed', refreshUnread);
+    window.addEventListener('focus', refreshUnread);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener('notifications-changed', refreshUnread);
+      window.removeEventListener('focus', refreshUnread);
+    };
+  }, [user?.id]);
+  const unreadBadge = unread > 0 && (
+    <span className="notification-count" aria-label={`${unread} unread notifications`}>
+      {unread > 99 ? '99+' : unread}
+    </span>
+  );
   const nav = user ? roleNavigation[user.role] || ['dashboard', 'account'] : ['catalog', 'account'];
   const screen = user && !roleRoutes[user.role]?.includes(page.screen) ? 'dashboard' : page.screen;
   const navLabel = (key) =>
@@ -194,6 +224,7 @@ export default function Workspace() {
                 <button key={key} onClick={() => navigate(key)} className={screen === key ? 'selected' : ''}>
                   <Icon size={19} />
                   {navLabel(key)}
+                  {key === 'notifications' && unreadBadge}
                 </button>
               );
             })}
@@ -236,6 +267,16 @@ export default function Workspace() {
               <span>{navLabel(screen) || 'Your rental'}</span>
             </div>
             <div className="row">
+              {user && (
+                <button
+                  className="button secondary"
+                  aria-label="Notifications"
+                  onClick={() => navigate('notifications')}
+                >
+                  {React.createElement(icons.notifications, { size: 19 })}
+                  {unreadBadge}
+                </button>
+              )}
               <span className={`connection ${online ? '' : 'offline'}`}>{online ? 'Online' : 'Offline'}</span>
               <select aria-label="Language" value={language} onChange={(e) => setLanguage(e.target.value)}>
                 <option value="en">English</option>
@@ -273,6 +314,7 @@ export default function Workspace() {
                 >
                   <Icon size={18} />
                   {navLabel(key)}
+                  {key === 'notifications' && unreadBadge}
                 </button>
               );
             })}
@@ -395,10 +437,37 @@ function Dashboard({ user, navigate }) {
   );
 }
 function DriverDashboard({ user, navigate }) {
-  const { data, error } = useData('/driver/deliveries');
+  const [locationStatus, setLocationStatus] = useState(''),
+    [deliveryVersion, setDeliveryVersion] = useState(0);
+  const { data, error } = useData('/driver/deliveries', deliveryVersion);
+  useEffect(() => {
+    if (!user.onDuty) return;
+    currentLocation()
+      .then((point) => api('/drivers/location', { method: 'PATCH', body: point }))
+      .then((result) => {
+        setDeliveryVersion((current) => current + 1);
+        setLocationStatus(
+          result.dispatch?.assigned?.length
+            ? 'Location updated and a nearby delivery was assigned.'
+            : 'Location updated for nearby delivery assignment.',
+        );
+      })
+      .catch((error) => setLocationStatus(error.message));
+  }, [user.onDuty]);
   const active =
-    data?.filter((job) => ['ASSIGNED', 'PICKUP_INSPECTION', 'IN_TRANSIT'].includes(job.status)) || [];
-  const completed = data?.filter((job) => ['DELIVERED', 'COMPLETED'].includes(job.status)) || [];
+    data?.filter((job) =>
+      [
+        'ASSIGNED',
+        'PICKUP_INSPECTION',
+        'IN_TRANSIT',
+        'DELIVERED',
+        'IN_PROGRESS',
+        'RETURN_INSPECTION',
+        'RETURN_IN_TRANSIT',
+        'RETURNED',
+      ].includes(job.status),
+    ) || [];
+  const completed = data?.filter((job) => job.status === 'COMPLETED') || [];
   const next = active[0];
   return (
     <>
@@ -465,14 +534,41 @@ function DriverDashboard({ user, navigate }) {
           </>
         )}
       </State>
+      {locationStatus && (
+        <p className="notice" role="status">
+          {locationStatus}
+        </p>
+      )}
     </>
   );
 }
 function Notifications({ navigate }) {
   const [v, setV] = useState(0);
+  const refresh = () => {
+    setV((value) => value + 1);
+    window.dispatchEvent(new Event('notifications-changed'));
+  };
   const { data, error } = useData('/notifications', v);
+  useEffect(() => {
+    const timer = setInterval(() => setV((current) => current + 1), 15000);
+    return () => clearInterval(timer);
+  }, []);
   return (
     <Panel title="Notifications">
+      <div className="row wrap">
+        <Button secondary onClick={() => setV((current) => current + 1)}>
+          Refresh notifications
+        </Button>
+        {data?.some((notification) => !notification.readAt) && (
+          <Action
+            secondary
+            run={() => api('/notifications/read-all', { method: 'POST', body: {} })}
+            done={refresh}
+          >
+            Mark all read
+          </Action>
+        )}
+      </div>
       <State data={data} error={error}>
         {data?.length ? (
           data.map((n) => (
@@ -482,15 +578,22 @@ function Notifications({ navigate }) {
                 <small>{when(n.createdAt)}</small>
               </div>
               {n.bookingId && (
-                <Button secondary onClick={() => navigate('booking', n.bookingId)}>
+                <Action
+                  secondary
+                  run={async () => {
+                    if (!n.readAt) await api(`/notifications/${n.id}`, { method: 'PATCH' });
+                    refresh();
+                    navigate('booking', n.bookingId);
+                  }}
+                >
                   View booking
-                </Button>
+                </Action>
               )}
               {!n.readAt && (
                 <Action
                   secondary
                   run={() => api(`/notifications/${n.id}`, { method: 'PATCH' })}
-                  done={() => setV((v) => v + 1)}
+                  done={refresh}
                 >
                   Mark read
                 </Action>

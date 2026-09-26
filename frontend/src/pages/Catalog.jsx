@@ -1,26 +1,66 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { api, money, when, getSession } from '../lib/api';
 import { useData, State, Field, Button, Panel, Badge, Empty, Action, Form } from '../ui';
+import { currentLocation, LocationPicker } from '../location';
 const Map = lazy(() => import('./Map'));
 export default function Catalog({ navigate, language, lowData }) {
   const [query, setQuery] = useState(''),
+    [searchQuery, setSearchQuery] = useState(''),
     [category, setCategory] = useState(''),
-    [coords, setCoords] = useState(null),
+    [coords, setCoords] = useState(() => {
+      try {
+        return JSON.parse(sessionStorage.getItem('farmiq-nearby-location'));
+      } catch {
+        return null;
+      }
+    }),
+    [locationVersion, setLocationVersion] = useState(0),
     [geoError, setGeoError] = useState(''),
+    [locationStatus, setLocationStatus] = useState(''),
     [map, setMap] = useState(false),
     [compare, setCompare] = useState([]),
     [sort, setSort] = useState('distance'),
     [date, setDate] = useState(''),
     [hours, setHours] = useState(6);
+  const located = useRef(false);
+  const isDemoFarmer = getSession()?.user.accountId === 'DEMO-FARMER';
+  const locate = useCallback(async () => {
+    setLocationStatus('Finding nearby machinery…');
+    setGeoError('');
+    try {
+      const point = await currentLocation();
+      if (isDemoFarmer) await api('/demo/relocate', { method: 'POST', body: point });
+      const value = { latitude: point.latitude, longitude: point.longitude };
+      sessionStorage.setItem('farmiq-nearby-location', JSON.stringify(value));
+      setCoords(value);
+      setLocationVersion((version) => version + 1);
+      setLocationStatus(
+        isDemoFarmer ? '9 nearby demo machines are ready to book.' : 'Nearby machinery updated.',
+      );
+    } catch (error) {
+      setGeoError(`${error.message}. You can still browse all listings.`);
+      setLocationStatus('');
+    }
+  }, [isDemoFarmer]);
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(query), 250);
+    return () => clearTimeout(timer);
+  }, [query]);
+  useEffect(() => {
+    if (isDemoFarmer && !located.current) {
+      located.current = true;
+      locate();
+    }
+  }, [isDemoFarmer, locate]);
   const path =
     '/machinery/nearby?' +
     new URLSearchParams({
-      search: query,
+      search: searchQuery,
       ...(category ? { category } : {}),
       ...(coords ? { lat: coords.latitude, lng: coords.longitude } : {}),
       ...(date ? { startsAt: new Date(date).toISOString(), hours } : {}),
     });
-  const { data, error } = useData(path);
+  const { data, error } = useData(path, locationVersion, true);
   const machines = data
     ? [...data].sort((a, b) =>
         sort === 'price'
@@ -82,23 +122,8 @@ export default function Catalog({ navigate, language, lowData }) {
           {data?.length ?? '…'} available listings {coords ? 'within 30 km' : ''}
         </p>
         <div className="row">
-          <Button
-            secondary
-            onClick={() => {
-              if (!navigator.geolocation) {
-                setGeoError('Location is not available');
-                return;
-              }
-              navigator.geolocation.getCurrentPosition(
-                (p) => {
-                  setCoords(p.coords);
-                  setGeoError('');
-                },
-                () => setGeoError('Location permission denied. You can still browse all listings.'),
-              );
-            }}
-          >
-            Use my location
+          <Button secondary onClick={locate}>
+            {coords ? 'Refresh nearby machines' : 'Use my location'}
           </Button>
           <Button secondary onClick={() => setMap(!map)}>
             {map ? 'Hide map' : 'Show map'}
@@ -108,6 +133,11 @@ export default function Catalog({ navigate, language, lowData }) {
       {geoError && (
         <p role="status" className="notice">
           {geoError}
+        </p>
+      )}
+      {locationStatus && (
+        <p role="status" className="notice">
+          {locationStatus}
         </p>
       )}
       {compare.length > 0 && (
@@ -199,8 +229,9 @@ export default function Catalog({ navigate, language, lowData }) {
   );
 }
 export function MachineDetail({ id, navigate }) {
-  const { data: m, error } = useData(`/machinery/${id}`);
-  const { data: operators } = useData('/operators');
+  const [machineVersion, setMachineVersion] = useState(0);
+  const { data: m, error } = useData(`/machinery/${id}`, machineVersion, true);
+  const { data: operators } = useData('/operators', machineVersion, true);
   const { data: addresses } = useData(getSession() ? '/addresses' : null);
   const key = `farmiq-draft-${getSession()?.user.id || 'guest'}-${id}`;
   const [draft, setDraft] = useState(() => {
@@ -211,7 +242,8 @@ export function MachineDetail({ id, navigate }) {
       }
     }),
     [pricing, setPricing] = useState(null),
-    [saved, setSaved] = useState(false);
+    [saved, setSaved] = useState(false),
+    [demoReady, setDemoReady] = useState(false);
   const update = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
   useEffect(() => {
     localStorage.setItem(key, JSON.stringify(draft));
@@ -304,6 +336,8 @@ export function MachineDetail({ id, navigate }) {
                       setSaved(true);
                       return;
                     }
+                    if (draft.farmLat == null || draft.farmLng == null)
+                      throw new Error('Capture the farm location before sending the request');
                     const input = {
                       machineryId: id,
                       scheduledAt: new Date(draft.scheduledAt).toISOString(),
@@ -367,28 +401,29 @@ export function MachineDetail({ id, navigate }) {
                     value={draft.farmAddress || ''}
                     onChange={(e) => update('farmAddress', e.target.value)}
                   />
-                  <div className="two">
-                    <Field
-                      label="Latitude"
-                      type="number"
-                      step="any"
-                      min="-90"
-                      max="90"
-                      required
-                      value={draft.farmLat ?? ''}
-                      onChange={(e) => update('farmLat', e.target.value)}
-                    />
-                    <Field
-                      label="Longitude"
-                      type="number"
-                      step="any"
-                      min="-180"
-                      max="180"
-                      required
-                      value={draft.farmLng ?? ''}
-                      onChange={(e) => update('farmLng', e.target.value)}
-                    />
-                  </div>
+                  <LocationPicker
+                    value={
+                      draft.farmLat != null ? { latitude: draft.farmLat, longitude: draft.farmLng } : null
+                    }
+                    onChange={async ({ latitude, longitude }) => {
+                      setDraft((current) => ({ ...current, farmLat: latitude, farmLng: longitude }));
+                      if (getSession()?.user.accountId === 'DEMO-FARMER') {
+                        await api('/demo/relocate', {
+                          method: 'POST',
+                          body: { latitude, longitude },
+                        });
+                        setDemoReady(true);
+                        setMachineVersion((version) => version + 1);
+                      }
+                    }}
+                    label="Capture farm location"
+                    onAddress={(address) => update('farmAddress', address)}
+                  />
+                  {demoReady && (
+                    <p className="notice" role="status">
+                      Demo machinery and the nearest delivery partner are ready near your farm.
+                    </p>
+                  )}
                   <Field label="Verified operator">
                     <select
                       value={draft.operatorId || ''}

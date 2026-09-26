@@ -2,6 +2,7 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const { demoMachines, demoDrivers, demoOperators, machineData } = require('./src/demo-data');
 const prisma = new PrismaClient();
 async function main() {
   if (process.env.NODE_ENV === 'production' || process.env.ALLOW_DEMO_SEED !== 'true')
@@ -10,14 +11,17 @@ async function main() {
   const accounts = [
     ['DEMO-FARMER', 'FARMER', 'Ravi Kumar', '+919000000001'],
     ['DEMO-OWNER', 'OWNER', 'Murugan Equipment', '+919000000002'],
-    ['DEMO-DRIVER', 'DRIVER', 'Suresh Kumar', '+919000000003'],
+    ...demoDrivers.map(([accountId, fullName, phone]) => [accountId, 'DRIVER', fullName, phone]),
     ['DEMO-ADMIN', 'ADMIN', 'FarmIQ Administrator', '+919000000004'],
   ];
   const users = {};
   for (const [accountId, role, fullName, phone] of accounts)
     users[role] = await prisma.user.upsert({
       where: { accountId },
-      update: {},
+      update:
+        role === 'DRIVER'
+          ? { onDuty: true, latitude: 10.79, longitude: 79.13, locationUpdatedAt: new Date() }
+          : {},
       create: {
         accountId,
         role,
@@ -28,65 +32,28 @@ async function main() {
         onDuty: role === 'DRIVER',
         latitude: 10.79,
         longitude: 79.13,
+        locationUpdatedAt: role === 'DRIVER' ? new Date() : null,
       },
     });
-  const machines = [
-    [
-      'demo-tractor',
-      'Mahindra 575 DI',
-      'Mahindra',
-      'TRACTOR',
-      1250,
-      47,
-      'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=900&q=75',
-    ],
-    [
-      'demo-harvester',
-      'Preet Combine Harvester',
-      'Preet',
-      'HARVESTER',
-      2800,
-      101,
-      'https://images.unsplash.com/photo-1628352081506-83c43123ed6d?auto=format&fit=crop&w=900&q=75',
-    ],
-    [
-      'demo-rotavator',
-      'Shaktiman Rotavator',
-      'Shaktiman',
-      'TILLAGE',
-      750,
-      40,
-      'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=75',
-    ],
-  ];
-  for (const [id, name, brand, category, pricePerHour, horsepower, imageUrl] of machines)
+  await prisma.setting.upsert({
+    where: { key: 'dispatch' },
+    update: { value: { enabled: true, radiusKm: 30, horizonHours: 24 } },
+    create: { key: 'dispatch', value: { enabled: true, radiusKm: 30, horizonHours: 24 } },
+  });
+  for (const operator of demoOperators) {
+    const data = { ...operator, active: true, verificationStatus: 'VERIFIED' };
+    await prisma.operator.upsert({ where: { id: operator.id }, create: data, update: data });
+  }
+  for (const machine of demoMachines) {
+    const data = machineData(machine, users.OWNER.id, 10.79, 79.13);
     await prisma.machinery.upsert({
-      where: { id },
-      update: {},
-      create: {
-        id,
-        name,
-        brand,
-        category,
-        pricePerHour,
-        pricePerDay: pricePerHour * 6.5,
-        horsepower,
-        imageUrl,
-        description:
-          'Demonstration listing. Verify the exact model, implements and field suitability with the owner.',
-        location: 'Thanjavur demonstration depot',
-        latitude: 10.79,
-        longitude: 79.13,
-        ownerId: users.OWNER.id,
-        verificationStatus: 'VERIFIED',
-        status: 'AVAILABLE',
-        operatorAvailable: false,
-        fuelLitresPerHour: 4,
-        acresPerHour: 1,
-      },
+      where: { id: machine.id },
+      update: data,
+      create: { id: machine.id, ...data },
     });
+  }
   console.log(
-    'Demo data ready. Accounts: DEMO-FARMER, DEMO-OWNER, DEMO-DRIVER, DEMO-ADMIN. Password: FarmIQ-demo-2026. Existing records were preserved.',
+    'Demo data ready. Farmer, owner, admin and three driver accounts use password FarmIQ-demo-2026. Existing records were preserved.',
   );
 }
 main()

@@ -101,6 +101,7 @@ export default function Operations() {
     [notice, setNotice] = useState('');
   const config = useData('/operations/dispatch', version);
   const messages = useData('/operations/messages', version);
+  const messaging = useData('/operations/messaging-status', version);
   return (
     <div className="stack">
       <Panel title="Automatic dispatch">
@@ -171,6 +172,33 @@ export default function Operations() {
           Opted-in booking notifications only. Sending requires server configuration. UNKNOWN means the
           provider outcome needs review; it is never automatically resent.
         </p>
+        <State data={messaging.data} error={messaging.error}>
+          {messaging.data && (
+            <div className={messaging.data.enabled ? 'notice' : 'notice error'} role="status">
+              <strong>
+                {messaging.data.enabled ? 'SMS sending is configured.' : 'SMS sending is disabled.'}
+              </strong>
+              {!messaging.data.enabled && <p>Missing configuration: {messaging.data.missing.join(', ')}</p>}
+              <p>
+                SMS opt-ins: {messaging.data.optedInUsers} · Queue: {JSON.stringify(messaging.data.queue)}
+              </p>
+            </div>
+          )}
+        </State>
+        <Action
+          secondary
+          run={() => api('/operations/messages/process', { method: 'POST', body: {} })}
+          done={(result) => {
+            setNotice(
+              result.enabled
+                ? `${result.processed} SMS notification(s) processed`
+                : 'SMS is disabled; open the configuration status below',
+            );
+            setVersion((current) => current + 1);
+          }}
+        >
+          Process SMS queue now
+        </Action>
         <Button secondary onClick={() => setVersion((v) => v + 1)}>
           Refresh delivery status
         </Button>
