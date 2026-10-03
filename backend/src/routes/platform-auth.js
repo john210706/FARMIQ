@@ -11,6 +11,7 @@ const limit = rateLimit({
   limit: 20,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  message: { error: 'Too many sign-in attempts. Please try again later.' },
 });
 function profile(u) {
   const { passwordHash, ...safe } = u;
@@ -64,7 +65,7 @@ router.patch('/auth/me', requireAuth(), async (req, res) => {
     })
     .parse(req.body);
   if (input.onDuty !== undefined && req.user.role !== 'DRIVER') fail(403, 'Driver account required');
-  res.json(profile(await prisma.user.update({ where: { id: req.user.id }, data: input })));
+  res.json(profile(await require('../services/preferences').update(req.user.id, input)));
 });
 router.delete('/auth/me', requireAuth(), async (req, res) => {
   const { scope, activeStatuses } = require('../domain');
@@ -78,35 +79,45 @@ router.delete('/auth/me', requireAuth(), async (req, res) => {
 });
 router.post('/auth/challenge', limit, async (req, res) => {
   const input = z
-    .object({ phone: z.string().regex(/^\+?[0-9]{10,15}$/), purpose: z.enum(['LOGIN', 'RESET']) })
+    .object({ phone: z.string().regex(/^\+[1-9]\d{7,14}$/), purpose: z.enum(['LOGIN', 'RESET']) })
     .parse(req.body);
-  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_FROM)
-    fail(503, 'SMS sign-in is not configured. Use your password.');
-  const code = String(crypto.randomInt(100000, 1000000));
-  const challenge = await prisma.authChallenge.create({
-    data: { ...input, codeHash: await bcrypt.hash(code, 12), expiresAt: new Date(Date.now() + 5 * 60000) },
-  });
-  const result = await fetch(
-    `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization:
-          'Basic ' +
-          Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString(
-            'base64',
-          ),
-        'Content-Type': 'application/x-www-form-urlencoded',
+  const verify = require('../services/verify');
+  if (!verify.configured()) fail(503, 'SMS sign-in is not configured. Use your password.');
+  const challenge = await require('../services/booking').serial(async (tx) => {
+    const recent = await tx.authChallenge.findMany({
+      where: {
+        phone: input.phone,
+        expiresAt: { gt: new Date(Date.now() - 10 * 60000) },
       },
-      body: new URLSearchParams({
-        To: input.phone,
-        From: process.env.TWILIO_FROM,
-        Body: `FarmIQ ${input.purpose.toLowerCase()} code: ${code}. Valid for 5 minutes.`,
-      }),
-      signal: AbortSignal.timeout(10000),
-    },
-  );
-  if (!result.ok) fail(502, 'SMS provider could not send the code');
+    });
+    if (recent.length >= 5 || recent.some((c) => +c.expiresAt > Date.now() + 270000))
+      fail(
+        429,
+        'Wait at least 30 seconds before requesting another code. Limit: five requests per 15 minutes.',
+      );
+    await tx.authChallenge.updateMany({
+      where: { phone: input.phone, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    return tx.authChallenge.create({
+      data: { ...input, codeHash: 'pending', expiresAt: new Date(Date.now() + 300000) },
+    });
+  });
+  const user = await prisma.user.findUnique({ where: { phone: input.phone } });
+  // Same response for unknown numbers; do not send billable messages to unregistered recipients.
+  if (user?.active) {
+    const result = await verify.request('Verifications', {
+      To: input.phone,
+      Channel: 'sms',
+      Locale: user.language,
+    });
+    if (!/^VE[a-f0-9]{32}$/i.test(result.sid || '') || result.status !== 'pending')
+      fail(502, 'SMS verification is temporarily unavailable. Please try again later.');
+    await prisma.authChallenge.update({
+      where: { id: challenge.id },
+      data: { codeHash: `twilio:${result.sid}` },
+    });
+  }
   res.json({ challengeId: challenge.id });
 });
 router.post('/auth/challenge/verify', limit, async (req, res) => {
@@ -117,11 +128,25 @@ router.post('/auth/challenge/verify', limit, async (req, res) => {
       password: z.string().min(10).max(100).optional(),
     })
     .parse(req.body);
-  const result = await require('../services/booking').serial(async (tx) => {
+  const serial = require('../services/booking').serial;
+  const challenge = await serial(async (tx) => {
     const c = await tx.authChallenge.findUnique({ where: { id: input.challengeId } });
     if (!c || c.usedAt || c.expiresAt < new Date() || c.attempts >= 5) return null;
+    if (c.purpose === 'RESET' && !input.password) fail(400, 'A new password is required');
     await tx.authChallenge.update({ where: { id: c.id }, data: { attempts: { increment: 1 } } });
-    if (!(await bcrypt.compare(input.code, c.codeHash))) return null;
+    return c;
+  });
+  if (!challenge || !/^twilio:VE[a-f0-9]{32}$/i.test(challenge.codeHash))
+    fail(400, 'Invalid or expired code');
+  const checked = await require('../services/verify').request('VerificationCheck', {
+    VerificationSid: challenge.codeHash.slice(7),
+    Code: input.code,
+  });
+  if (checked.status !== 'approved' || checked.sid !== challenge.codeHash.slice(7))
+    fail(400, 'Invalid or expired code');
+  const result = await serial(async (tx) => {
+    const c = await tx.authChallenge.findUnique({ where: { id: challenge.id } });
+    if (!c || c.usedAt || c.expiresAt < new Date()) return null;
     const user = await tx.user.findUnique({ where: { phone: c.phone } });
     if (!user?.active) return null;
     if (c.purpose === 'RESET' && !input.password) fail(400, 'A new password is required');

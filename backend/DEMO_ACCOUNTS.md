@@ -13,4 +13,4 @@ Only created by explicitly running `ALLOW_DEMO_SEED=true npm run db:seed -w farm
 
 Development-only password for every demo account: `FarmIQ-demo-2026`.
 
-The seed does not overwrite existing accounts or machinery. The application never automatically signs in with these credentials. Use separate browser profiles or private windows to demonstrate multiple roles; each session is held in session storage.
+The seed preserves account passwords and bookings, but refreshes demo machinery/operators, resets demo driver duty/location and enables default dispatch settings. Do not rerun it to repair a real deployment. The application never automatically signs in with these credentials. Use separate browser profiles or private windows to demonstrate multiple roles; each session is held in session storage.

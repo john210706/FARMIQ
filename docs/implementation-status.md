@@ -1,6 +1,8 @@
-# FarmIQ implementation status — 26 September 2026
+# FarmIQ implementation status — 3 October 2026
 
 This is a substantial working MVP upgrade, not completion of every production capability in the earlier assessment. The previous numerical maturity estimates were informal; this checklist replaces them with testable scope.
+
+The October update adds provider-managed Twilio Verify challenges, signed STOP/START consent handling, editable tutorial media with click-to-load YouTube playback, nine localized walkthroughs, optional private Supabase Storage/ClamAV integration, request logging, graceful shutdown, and one-command isolated full verification. See [integration setup](integrations.md) for activation and limitations.
 
 ## Implemented
 
@@ -12,7 +14,7 @@ This is a substantial working MVP upgrade, not completion of every production ca
 | Reservations     | Owner acceptance/rejection, 30-minute payment hold, server quotation, hourly/daily pricing, operator qualification/overlap check, signed-in request idempotency, serializable booking transactions                                                                                                                        |
 | Lifecycle        | Role-specific transitions, booking lists/details, timelines, unpaid rescheduling, cancellation quote and sandbox refund record, balance payment, return/completion, history                                                                                                                                               |
 | Owner tools      | Create/edit/deactivate listings, maintenance state, delivery radius, calendar blackout periods, service records, calculated earnings and activity                                                                                                                                                                         |
-| Delivery         | Dedicated driver dashboard, assigned jobs only, automatic browser location capture, verified/on-duty eligibility, private job/contact data, pickup/delivery/return inspections, fresh driver GPS, nearest-driver evidence and live three-point map, handover codes, and driver return-to-owner stages                           |
+| Delivery         | Dedicated driver dashboard, assigned jobs only, automatic browser location capture, verified/on-duty eligibility, private job/contact data, pickup/delivery/return inspections, fresh driver GPS, nearest-driver evidence and live three-point map, handover codes, and driver return-to-owner stages                     |
 | Trust            | Mandatory photographed pickup/delivery/return inspections, recorded agreement version/time, completed-rental reviews with separate condition/reliability/handling scores, private evidence access                                                                                                                         |
 | Administration   | User/listing/document verification, suspension/reactivation, tickets and resolution, review moderation, audit log, commission setting, operator creation, tutorial publishing, driver reassignment, same-owner replacement, consent-recorded assisted booking                                                             |
 | Dispatch         | Optional nearest-driver allocation for paid rentals using verified/on-duty status, a fresh five-minute GPS fix, configurable radius/start horizon, active-job exclusion, serializable assignment and manual administrator run                                                                                             |
@@ -27,11 +29,11 @@ This is a substantial working MVP upgrade, not completion of every production ca
 ## Implemented integrations that need configuration and external validation
 
 - Razorpay orders and signed captured/failed webhooks: needs provider keys, an HTTPS callback endpoint and end-to-end provider test transactions. Real escrow, payouts and provider refunds are not implied.
-- Twilio OTP login/reset and signed SMS commands: needs a sender/account and local messaging registration/consent arrangements. No provider traffic was sent.
+- Twilio Verify login/reset needs a Verify service and account credentials; booking SMS separately needs a sender, outbox activation and messaging consent/compliance arrangements. Signed STOP/START updates consent. No real provider traffic was sent.
 - IVR booking-status and assisted-callback menu: needs a telephone number, callback staff and live voice testing. Full autonomous voice booking and regional narration remain to be built.
 - Gemini assistance: requires an explicitly configured, available model and key. Fallback guidance works without AI. No generated training media is shipped.
 - Weather: Open-Meteo adapter is implemented, but production availability and service plan should be validated. The forecast is advisory, not an equipment-safety clearance.
-- Learning catalogue: administrators must supply reviewed manufacturer/agronomist content, real media URLs and captions. There is no fabricated certification badge or substitute video.
+- Learning catalogue: nine localized app walkthroughs are available. Three University of Maine tractor-safety videos are unpublished review drafts, not translated regional training. Administrators must review suitability/permission/captions and supply regional manufacturer/agronomist training. There is no fabricated certification badge.
 
 ## Still outstanding — not represented as complete
 
@@ -45,13 +47,13 @@ This is a substantial working MVP upgrade, not completion of every production ca
 8. Automated offline submission queue for bookings and inspections. Drafts and public pages are cached; financially significant actions require explicit online submission.
 9. Automated machine safety certification, generated regional tutorial media, operator self-service accounts and operator availability calendars beyond booking conflict checks.
 10. Complete bidirectional reputation including farmer conduct, granular inspector approval/signatures and transport-return route management.
-11. Production monitoring/alerts, shared rate limiting, private cloud storage, malware scanning, load tests, backup automation, retention/purge jobs, independent security review and public deployment.
+11. Production monitoring/alerts, shared rate limiting, load tests, backup automation, retention/purge jobs, independent security review and public deployment. Private Supabase Storage and ClamAV adapters now exist; provisioning, credentials, scanner operations, live validation and migration of existing local files remain outstanding.
 12. Final legal/privacy/cancellation wording, insurance and payments compliance, support staffing and business-provider contracts. The repository includes only factual prototype policy notes.
 
 ## Database and verification notes
 
-Final local checks: production frontend build passed; all 9 backend test cases pass when the PostgreSQL integration database is configured (the lifecycle case is skipped when `TEST_DATABASE_URL` is absent), including driver assignment/access boundaries, localized SMS/IVR prompts, lifecycle/concurrency, automatic dispatch, payout idempotency and uncertain-message handling; all 8 desktop/mobile browser checks passed, including the role-specific driver workspace, Tamil/Hindi localization, localized validation, the operations page, dashboard WCAG A/AA automated checks and logout. All five migrations deployed successfully to a fresh test database. The full npm dependency audit reported zero known vulnerabilities. Browser coverage is a smoke suite, not exhaustive testing of every administrative form or external provider.
+October final local checks: `npm run verify` passed the production frontend build, all 14 backend tests and all 12 desktop/mobile browser tests with zero skipped. Coverage includes the four-role lifecycle, nearest eligible driver selection and assigned-driver notification, access boundaries, payment idempotency, localized SMS/IVR, Verify challenge reuse/throttling and signed opt-out, private storage and scanner behavior, tutorial publication validation, persisted localized learning progress, readable login failures and dashboard accessibility. All five migrations applied successfully to a fresh isolated PostgreSQL database. `npm audit` reported zero known vulnerabilities and `git diff --check` passed. Provider behavior is mocked in integration tests; this is not proof of live carrier delivery, operational cloud storage or exhaustive testing of every screen.
 
-No existing Supabase data was migrated. The schema and migrations were exercised against a disposable local PostgreSQL 16 container named `farmiq-review-db`, bound to localhost port 55432. Existing legacy payment data is not silently converted to real-money records. See `deployment.md` before upgrading a real database.
+No existing Supabase schema was migrated in the October update. The explicitly run learning seed added 12 content records to the configured development database (nine published guides and three unpublished video drafts), preserving existing records. Full verification now creates an isolated local PostgreSQL container with a random name/port. Existing legacy payment data is not silently converted to real-money records. See `deployment.md` before upgrading a real database.
 
 The removed duplicate frontend and old destructive CLI scripts are recoverable from Git history. No user data was deleted. Old static dashboards, auto-login/payment simulations and unsafe hard-coded AI pesticide advice were removed from the active source tree.

@@ -9,6 +9,71 @@ export const setLocale = (language) => {
 export const getLanguage = () => activeLanguage;
 
 const rows = [
+  [
+    'Too many requests. Please wait a minute and try again.',
+    'அதிக கோரிக்கைகள். ஒரு நிமிடம் காத்திருந்து மீண்டும் முயற்சிக்கவும்.',
+    'बहुत अधिक अनुरोध हैं। एक मिनट बाद फिर कोशिश करें।',
+  ],
+  [
+    'Too many sign-in attempts. Please try again later.',
+    'அதிக உள்நுழைவு முயற்சிகள். பின்னர் மீண்டும் முயற்சிக்கவும்.',
+    'बहुत अधिक साइन इन प्रयास हैं। बाद में फिर कोशिश करें।',
+  ],
+  [
+    'Cannot reach FarmIQ. Check your connection and try again.',
+    'FarmIQ-ஐ தொடர்புகொள்ள முடியவில்லை. இணைய இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.',
+    'FarmIQ से संपर्क नहीं हुआ। इंटरनेट जाँचकर फिर कोशिश करें।',
+  ],
+  [
+    'FarmIQ is temporarily unavailable. Please try again shortly.',
+    'FarmIQ தற்காலிகமாகக் கிடைக்கவில்லை. சிறிது நேரத்தில் மீண்டும் முயற்சிக்கவும்.',
+    'FarmIQ अभी उपलब्ध नहीं है। थोड़ी देर बाद फिर कोशिश करें।',
+  ],
+  ['Save tutorial', 'பயிற்சியைச் சேமி', 'ट्यूटोरियल सहेजें'],
+  ['Edit tutorial', 'பயிற்சியைத் திருத்து', 'ट्यूटोरियल संपादित करें'],
+  ['Preview original source', 'அசல் மூலத்தை முன்னோட்டமிடு', 'मूल स्रोत देखें'],
+  [
+    'Preview the original video and check its language, captions and source before publishing.',
+    'வெளியிடும் முன் அசல் காணொளியின் மொழி, வசனங்கள் மற்றும் மூலத்தைச் சரிபார்க்கவும்.',
+    'प्रकाशित करने से पहले मूल वीडियो की भाषा, कैप्शन और स्रोत जाँचें।',
+  ],
+  ['Search learning guides', 'கற்றல் வழிகாட்டிகளைத் தேடு', 'सीखने की मार्गदर्शिका खोजें'],
+  ['Learning progress', 'கற்றல் முன்னேற்றம்', 'सीखने की प्रगति'],
+  ['Mark next step reviewed', 'அடுத்த படியைப் படித்ததாகக் குறி', 'अगला चरण पढ़ा हुआ चिह्नित करें'],
+  ['Load video', 'காணொளியை ஏற்று', 'वीडियो लोड करें'],
+  ['Open original video', 'அசல் காணொளியைத் திற', 'मूल वीडियो खोलें'],
+  [
+    'This video is hosted on YouTube. Load it to connect to YouTube.',
+    'இந்தக் காணொளி YouTube-ல் உள்ளது. YouTube-உடன் இணைக்க ஏற்றவும்.',
+    'यह वीडियो YouTube पर है। YouTube से जुड़ने के लिए इसे लोड करें।',
+  ],
+  [
+    'Video language and captions depend on the original publisher.',
+    'காணொளியின் மொழி மற்றும் வசனங்கள் அசல் வெளியீட்டாளரைச் சார்ந்தவை.',
+    'वीडियो की भाषा और कैप्शन मूल प्रकाशक पर निर्भर हैं।',
+  ],
+  [
+    'Video could not load. Use the original source or read the guide below.',
+    'காணொளியை ஏற்ற முடியவில்லை. அசல் மூலத்தைப் பயன்படுத்தவும் அல்லது கீழே உள்ள வழிகாட்டியைப் படிக்கவும்.',
+    'वीडियो लोड नहीं हुआ। मूल स्रोत खोलें या नीचे मार्गदर्शिका पढ़ें।',
+  ],
+  [
+    'MP4/WebM or YouTube HTTPS URL (optional)',
+    'MP4/WebM அல்லது YouTube HTTPS முகவரி (விருப்பம்)',
+    'MP4/WebM या YouTube HTTPS लिंक (वैकल्पिक)',
+  ],
+  [
+    'WebVTT captions HTTPS URL (required for hosted video)',
+    'WebVTT வசன HTTPS முகவரி (நேரடி காணொளிக்குத் தேவை)',
+    'WebVTT कैप्शन HTTPS लिंक (होस्ट किए वीडियो के लिए आवश्यक)',
+  ],
+  ['Request another code', 'மற்றொரு குறியீட்டைக் கோரு', 'दूसरा कोड माँगें'],
+  ['SMS sign-in is configured.', 'SMS உள்நுழைவு கட்டமைக்கப்பட்டுள்ளது.', 'SMS साइन इन कॉन्फ़िगर है।'],
+  [
+    'SMS sign-in needs a Twilio Verify service.',
+    'SMS உள்நுழைவுக்கு Twilio Verify சேவை தேவை.',
+    'SMS साइन इन के लिए Twilio Verify सेवा चाहिए।',
+  ],
   ['GROW TOGETHER', 'ஒன்றாக வளர்வோம்', 'मिलकर आगे बढ़ें'],
   ['Hello,', 'வணக்கம்,', 'नमस्ते,'],
   ['Overview', 'முகப்பு', 'अवलोकन'],

@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { api, download, when } from '../lib/api';
 import { useData, State, Panel, Field, Button, Action, Form, Badge, Empty } from '../ui';
 import { tr } from '../i18n';
+import TutorialMedia from './TutorialMedia';
 export default function Learning({ language }) {
   const [v, setV] = useState(0),
     [messages, setMessages] = useState([]),
     [chat, setChat] = useState(''),
-    [speechError, setSpeechError] = useState('');
+    [speechError, setSpeechError] = useState(''),
+    [search, setSearch] = useState('');
   const { data: tutorials, error } = useData('/tutorials', v);
   const { data: progress } = useData('/progress', v);
   const { data: history } = useData('/ai/history', v);
@@ -124,36 +126,65 @@ export default function Learning({ language }) {
         </Panel>
       </div>
       <Panel title="Equipment learning library">
+        <Field
+          label="Search learning guides"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          type="search"
+        />
         <State data={tutorials} error={error}>
           {tutorials?.filter((t) => t.language === language).length ? (
             tutorials
-              .filter((t) => t.language === language)
+              .filter(
+                (t) =>
+                  t.language === language &&
+                  `${t.title} ${t.category} ${t.summary}`
+                    .toLocaleLowerCase()
+                    .includes(search.toLocaleLowerCase()),
+              )
               .map((t) => (
                 <article className="panel" key={t.id}>
                   <Badge>{t.category}</Badge>
                   <h2>{t.title}</h2>
                   <p>{t.summary}</p>
-                  {t.videoUrl && (
-                    <video controls preload="none" crossOrigin="anonymous" width="100%">
-                      <source src={t.videoUrl} />
-                      {t.captionsUrl && (
-                        <track kind="captions" srcLang={t.language} src={t.captionsUrl} default />
-                      )}
-                      Your browser cannot play this video.
-                    </video>
-                  )}
+                  <TutorialMedia tutorial={t} />
                   {t.audioUrl && <audio controls preload="none" src={t.audioUrl} />}
                   <ol>
                     {t.steps.map((s, i) => (
                       <li key={i}>{s}</li>
                     ))}
                   </ol>
+                  <label className="field">
+                    <span>Learning progress</span>
+                    <progress
+                      max={t.steps.length}
+                      value={progress?.find((p) => p.tutorialId === t.id)?.completedSteps || 0}
+                    />
+                  </label>
                   <p>
                     <a href={t.sourceUrl} target="_blank" rel="noreferrer">
                       Original source
                     </a>
                   </p>
                   <div className="row wrap">
+                    <Action
+                      secondary
+                      disabled={!!progress?.find((p) => p.tutorialId === t.id)?.completedAt}
+                      run={() =>
+                        api(`/tutorials/${t.id}/progress`, {
+                          method: 'PUT',
+                          body: {
+                            completedSteps: Math.min(
+                              t.steps.length,
+                              (progress?.find((p) => p.tutorialId === t.id)?.completedSteps || 0) + 1,
+                            ),
+                          },
+                        })
+                      }
+                      done={refresh}
+                    >
+                      Mark next step reviewed
+                    </Action>
                     <Button secondary onClick={() => speak(t.title + '. ' + t.steps.join('. '))}>
                       Read aloud
                     </Button>

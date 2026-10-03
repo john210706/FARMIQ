@@ -1,5 +1,23 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+test('sign-in explains a stopped server and rate limits', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Mobile number or account ID').fill('DEMO-FARMER');
+  await page.getByLabel('Password', { exact: true }).fill('FarmIQ-demo-2026');
+  await page.route('**/api/auth/login', (route) =>
+    route.fulfill({ status: 503, contentType: 'text/plain', body: 'Unavailable' }),
+  );
+  await page.getByRole('button', { name: 'Sign in', exact: true }).last().click();
+  await expect(page.getByRole('alert')).toHaveText(
+    'FarmIQ is temporarily unavailable. Please try again shortly.',
+  );
+  await page.unroute('**/api/auth/login');
+  await page.route('**/api/auth/login', (route) =>
+    route.fulfill({ status: 429, contentType: 'text/plain', body: 'Slow down' }),
+  );
+  await page.getByRole('button', { name: 'Sign in', exact: true }).last().click();
+  await expect(page.getByRole('alert')).toHaveText('Too many requests. Please wait a minute and try again.');
+});
 test('administrator dispatch and finance controls load without layout overflow', async ({ page }) => {
   test.skip(!process.env.E2E_WITH_API, 'Requires isolated database and demo seed');
   await page.goto('/');
@@ -65,6 +83,30 @@ test('driver account is limited to its delivery workspace', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'Saved machinery' })).toHaveCount(0);
   await expect(page.getByText('Low-data mode (hide catalogue photos)')).toHaveCount(0);
   await expect(page.getByRole('option', { name: 'OWNERSHIP' })).toHaveCount(0);
+});
+test('learning guides are localized and persist step progress', async ({ page }) => {
+  test.skip(!process.env.E2E_WITH_API, 'Requires isolated database and starter learning content');
+  await page.goto('/');
+  await page.getByLabel('Mobile number or account ID').fill('DEMO-FARMER');
+  await page.getByLabel('Password', { exact: true }).fill('FarmIQ-demo-2026');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).last().click();
+  await expect(page.getByRole('heading', { name: 'Hello, Ravi.' })).toBeVisible();
+  await page.goto('/#learning');
+  await expect(page.getByRole('heading', { name: 'Book equipment in FarmIQ' })).toBeVisible();
+  const guide = page
+    .locator('article')
+    .filter({ has: page.getByRole('heading', { name: 'Book equipment in FarmIQ' }) });
+  await guide.getByRole('button', { name: 'Mark next step reviewed' }).click();
+  await expect(guide.locator('progress')).toHaveAttribute('value', /[1-5]/);
+  await page.reload();
+  await expect(guide.locator('progress')).toHaveAttribute('value', /[1-5]/);
+  await page.getByRole('combobox', { name: 'Language', exact: true }).selectOption('ta');
+  await expect(page.getByRole('heading', { name: 'FarmIQ-ல் இயந்திரத்தை முன்பதிவு செய்வது' })).toBeVisible();
+  await page.getByRole('combobox', { name: 'மொழி', exact: true }).selectOption('hi');
+  await expect(page.getByRole('heading', { name: 'FarmIQ में मशीन बुक करें' })).toBeVisible();
+  expect(await page.locator('iframe').count()).toBe(0);
+  await page.getByRole('combobox', { name: 'भाषा', exact: true }).selectOption('en');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });
 test('real account sign-in shows working scoped dashboard and can sign out', async ({
   page,

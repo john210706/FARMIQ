@@ -3,6 +3,7 @@ import Operations, { Finance } from './Operations';
 import { api, money, when, openDocument } from '../lib/api';
 import { useData, State, Panel, Field, Button, Action, Form, Badge, Empty } from '../ui';
 import { LocationPicker } from '../location';
+import TutorialEditor from './TutorialEditor';
 export default function Fleet() {
   const [version, setVersion] = useState(0),
     [edit, setEdit] = useState(null),
@@ -436,6 +437,19 @@ export function Admin() {
                     <>
                       <Badge>{item.language}</Badge>
                       <p>{item.summary}</p>
+                      <a href={item.videoUrl || item.sourceUrl} target="_blank" rel="noreferrer">
+                        Preview original source
+                      </a>
+                      <details>
+                        <summary>Edit tutorial</summary>
+                        <TutorialEditor
+                          tutorial={item}
+                          onSave={async (body) => {
+                            await api(`/admin/tutorials/${item.id}`, { method: 'PATCH', body });
+                            refresh();
+                          }}
+                        />
+                      </details>
                       <Action
                         secondary
                         run={() =>
@@ -554,55 +568,12 @@ export function Admin() {
       </div>
       {tab === 'tutorials' && (
         <Panel title="Publish reviewed learning content">
-          <Form
-            label="Create tutorial"
-            onSubmit={async (v, f) => {
-              await api('/admin/tutorials', {
-                method: 'POST',
-                body: {
-                  ...v,
-                  steps: v.steps.split('\n').filter(Boolean),
-                  published: v.published === 'on',
-                  videoUrl: v.videoUrl || null,
-                  audioUrl: v.audioUrl || null,
-                  captionsUrl: v.captionsUrl || null,
-                },
-              });
-              f.reset();
+          <TutorialEditor
+            onSave={async (body) => {
+              await api('/admin/tutorials', { method: 'POST', body });
               refresh();
             }}
-          >
-            {[
-              ['title', 'Title'],
-              ['category', 'Category'],
-              ['summary', 'Summary'],
-              ['sourceUrl', 'Manufacturer / reviewed source HTTPS URL'],
-              ['videoUrl', 'Video HTTPS URL (optional)'],
-              ['audioUrl', 'Audio HTTPS URL (optional)'],
-              ['captionsUrl', 'WebVTT captions HTTPS URL (required with video)'],
-            ].map(([name, label]) => (
-              <Field
-                key={name}
-                label={label}
-                name={name}
-                required={['title', 'category', 'summary', 'sourceUrl'].includes(name)}
-              />
-            ))}
-            <Field label="Language">
-              <select name="language">
-                <option value="en">English</option>
-                <option value="ta">Tamil</option>
-                <option value="hi">Hindi</option>
-              </select>
-            </Field>
-            <Field label="Reviewed steps, one per line">
-              <textarea name="steps" required />
-            </Field>
-            <label className="check">
-              <input type="checkbox" name="published" />
-              Publish now
-            </label>
-          </Form>
+          />
         </Panel>
       )}
       <Panel title="Assisted farmer booking">

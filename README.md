@@ -27,7 +27,7 @@ Optional demonstration data:
 ALLOW_DEMO_SEED=true npm run db:seed -w farmiq-backend
 ```
 
-The seed preserves existing records and refuses to run in production. Demo account IDs: `DEMO-FARMER`, `DEMO-OWNER`, `DEMO-DRIVER`, `DEMO-ADMIN`. Shared development password: `FarmIQ-demo-2026`. Never use these accounts in a public deployment.
+The seed preserves passwords/bookings but refreshes demo machinery/operators, driver duty/location and dispatch settings; it refuses to run in production. Demo account IDs: `DEMO-FARMER`, `DEMO-OWNER`, `DEMO-DRIVER`, `DEMO-DRIVER-2`, `DEMO-DRIVER-3`, `DEMO-ADMIN`. Shared development password: `FarmIQ-demo-2026`. Never use these accounts in a public deployment.
 
 ```sh
 npm run dev
@@ -44,8 +44,8 @@ Open the Vite URL, normally `http://localhost:5173`. `/api` is proxied to port 3
 5. Driver uploads pickup inspection photos, starts delivery and shares GPS while the delivery page is open.
 6. Farmer generates a handover code. Driver must provide it with a recent GPS fix within 500 metres of the farm.
 7. Farmer records the delivery inspection, pays the balance and starts the rental.
-8. Farmer requests return inspection; the owner records the return and completes the rental.
-9. Farmer reviews the completed rental. All participants can see the timeline, receipts and permitted evidence.
+8. Farmer requests return; the assigned driver photographs the return inspection and transports the equipment back. The owner supplies a return handover code; the driver confirms it with a fresh GPS fix near the owner before the owner completes the rental.
+9. Farmer reviews the completed rental. Participants see their permitted timeline/evidence; receipts and payment details are not exposed to drivers.
 
 ## Other implemented features
 
@@ -63,7 +63,28 @@ Open the Vite URL, normally `http://localhost:5173`. `/api` is proxied to port 3
 - Installable app shell, public catalogue caching, private booking drafts, low-data preference, and a complete English/Tamil/Hindi interface with localized validation, dates, INR currency, browser voice input/read-aloud, SMS/IVR prompts and tutorial captions.
 - Optional Razorpay order/webhook integration, Twilio OTP and signed SMS/voice endpoints, and configurable Gemini assistance. These need credentials and provider validation before activation.
 
+## Learning content
+
+The optional content seed adds nine English/Tamil/Hindi application walkthroughs and three unpublished English tractor-safety video drafts from University of Maine Cooperative Extension. It preserves existing records:
+
+```sh
+ALLOW_LEARNING_SEED=true npm run learning:seed -w farmiq-backend
+```
+
+Administrators can edit and publish tutorials. Review video suitability, captions and permission before publishing; translated interface text does not translate an external video. See [integration setup](docs/integrations.md).
+
 ## Verification
+
+For the full isolated suite, install Chromium and have Docker or Podman running:
+
+```sh
+npx playwright install chromium
+npm run verify
+```
+
+This creates a disposable local PostgreSQL database, applies migrations, builds, seeds test accounts/content, runs backend and authenticated desktop/mobile browser tests, then removes its temporary resources. It does not use the development database or send SMS. Alternatively supply an explicit localhost `TEST_DATABASE_URL` whose database name includes `test`; that database is retained and receives test fixtures.
+
+Individual checks:
 
 ```sh
 npm run build

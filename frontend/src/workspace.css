@@ -823,6 +823,12 @@ th {
 .skip:focus {
   top: 10px;
 }
+.tutorial-video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: 12px;
+}
 video {
   max-height: 400px;
   background: #102116;

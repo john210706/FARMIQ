@@ -6,6 +6,10 @@ const crypto = require('node:crypto');
 const { FRONTEND_URL } = require('./config');
 const app = express();
 app.disable('x-powered-by');
+const proxyHops = Number(process.env.TRUST_PROXY_HOPS || 0);
+if (!Number.isInteger(proxyHops) || proxyHops < 0 || proxyHops > 5)
+  throw new Error('TRUST_PROXY_HOPS must be between 0 and 5');
+if (proxyHops) app.set('trust proxy', proxyHops);
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -16,7 +20,7 @@ app.use(
         fontSrc: ["'self'", 'https://fonts.gstatic.com'],
         imgSrc: ["'self'", 'data:', 'https:'],
         connectSrc: ["'self'", 'https://*.razorpay.com'],
-        frameSrc: ['https://*.razorpay.com'],
+        frameSrc: ['https://*.razorpay.com', 'https://www.youtube-nocookie.com'],
         mediaSrc: ["'self'", 'https:'],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
@@ -26,9 +30,23 @@ app.use(
 );
 app.use(cors({ origin: FRONTEND_URL }));
 app.use((req, res, next) => {
+  const started = Date.now();
   req.requestId = crypto.randomUUID();
   res.set('X-Request-ID', req.requestId);
   res.set('Cache-Control', 'no-store');
+  if (process.env.LOG_REQUESTS === 'true')
+    res.on('finish', () =>
+      console.log(
+        JSON.stringify({
+          level: 'info',
+          requestId: req.requestId,
+          method: req.method,
+          path: req.path,
+          status: res.statusCode,
+          durationMs: Date.now() - started,
+        }),
+      ),
+    );
   next();
 });
 app.use(
@@ -39,7 +57,16 @@ app.use(
     },
   }),
 );
-app.use('/api', rateLimit({ windowMs: 60000, limit: 180, standardHeaders: 'draft-7', legacyHeaders: false }));
+app.use(
+  '/api',
+  rateLimit({
+    windowMs: 60000,
+    limit: process.env.NODE_ENV === 'test' ? 6000 : 180,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: { error: 'Too many requests. Please wait a minute and try again.' },
+  }),
+);
 app.use('/api', require('./routes/health'));
 app.use('/api', require('./routes/platform-auth').router);
 app.use('/api', require('./routes/channels').router);
@@ -63,6 +90,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 app.use((req, res) => res.status(404).json({ error: 'API endpoint not found' }));
 app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
   const status =
     error.status ||
     (error.name === 'ZodError'

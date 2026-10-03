@@ -122,6 +122,7 @@ router.get('/operations/messaging-status', async (req, res) => {
   const grouped = await prisma.messageOutbox.groupBy({ by: ['status'], _count: { _all: true } });
   res.json({
     ...outbox.configuration(),
+    otpEnabled: require('../services/verify').configured(),
     queue: Object.fromEntries(grouped.map((row) => [row.status, row._count._all])),
     optedInUsers: await prisma.user.count({
       where: { active: true, preferences: { path: ['sms'], equals: true } },

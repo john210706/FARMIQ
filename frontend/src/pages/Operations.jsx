@@ -169,6 +169,11 @@ export default function Operations() {
       <Finance admin />
       <Panel title="SMS delivery outbox">
         <p>
+          {messaging.data?.otpEnabled
+            ? 'SMS sign-in is configured.'
+            : 'SMS sign-in needs a Twilio Verify service.'}
+        </p>
+        <p>
           Opted-in booking notifications only. Sending requires server configuration. UNKNOWN means the
           provider outcome needs review; it is never automatically resent.
         </p>

@@ -422,6 +422,65 @@ test(
     );
     const message = await prisma.messageOutbox.findFirst({ where: { userId: driver.user.id } });
     assert.ok(message, 'newly allocated driver must receive notification');
+    const candidates = [];
+    for (const [label, offset, onDuty, fresh] of [
+      ['near', 0.0002, true, true],
+      ['far', 0.002, true, true],
+      ['off', 0.00001, false, true],
+      ['stale', 0.00001, true, false],
+    ]) {
+      candidates.push(
+        await prisma.user.create({
+          data: {
+            accountId: `TEST-${prefix}-${label}`,
+            phone: `test-${prefix}-${label}`,
+            fullName: `Candidate ${label}`,
+            role: 'DRIVER',
+            passwordHash: admin.passwordHash,
+            verificationStatus: 'VERIFIED',
+            onDuty,
+            latitude: -60 + offset,
+            longitude: dispatchLongitude,
+            locationUpdatedAt: fresh ? new Date() : new Date(0),
+          },
+        }),
+      );
+    }
+    const secondDispatch = await prisma.booking.create({
+      data: {
+        farmerId: winner.user.id,
+        machineryId: m.body.id,
+        scheduledAt: new Date(Date.now() + 3600000),
+        endsAt: new Date(Date.now() + 7200000),
+        durationHours: 1,
+        farmLat: -60,
+        farmLng: dispatchLongitude,
+        status: 'PAID',
+        totalAmount: 1000,
+        advanceAmount: 500,
+      },
+    });
+    await dispatch.run(admin);
+    const chosen = await prisma.booking.findUnique({ where: { id: secondDispatch.id } });
+    assert.equal(
+      chosen.driverId,
+      candidates[0].id,
+      'Choose nearest eligible driver; closer busy, off-duty and stale drivers are excluded',
+    );
+    assert.equal(
+      await prisma.notification.count({ where: { bookingId: chosen.id, userId: candidates[0].id } }),
+      1,
+    );
+    assert.equal(
+      await prisma.notification.count({
+        where: { bookingId: chosen.id, userId: { in: candidates.slice(1).map((u) => u.id) } },
+      }),
+      0,
+    );
+    assert.match(
+      (await prisma.bookingEvent.findFirst({ where: { bookingId: chosen.id, toStatus: 'ASSIGNED' } })).note,
+      /selected from 2 available candidates/,
+    );
     const outbox = require('../src/services/outbox');
     let sends = 0;
     await Promise.all([

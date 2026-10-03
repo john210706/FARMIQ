@@ -11,7 +11,8 @@
     "test": "npm run test -w farmiq-backend",
     "test:e2e": "playwright test",
     "db:generate": "npm run db:generate -w farmiq-backend",
-    "check": "npm run build && npm test"
+    "check": "npm run build && npm test",
+    "verify": "node scripts/verify.mjs"
   },
   "workspaces": [
     "frontend",

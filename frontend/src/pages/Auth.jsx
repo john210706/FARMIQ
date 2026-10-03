@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { api } from '../lib/api';
-import { Form, Field, Button } from '../ui';
+import { Form, Field, Button, useData } from '../ui';
 export default function Auth({ onLogin }) {
+  const { data: capabilities } = useData('/capabilities');
   const [mode, setMode] = useState('login'),
     [challenge, setChallenge] = useState(null),
     [purpose, setPurpose] = useState('LOGIN');
@@ -95,7 +96,12 @@ export default function Auth({ onLogin }) {
             <p className="muted">Owners and drivers need administrator verification before accepting work.</p>
           </Form>
         )}
-        {mode === 'otp' &&
+        {mode === 'otp' && capabilities?.smsLogin === false ? (
+          <p className="notice" role="status">
+            SMS sign-in is not configured. Use your password.
+          </p>
+        ) : (
+          mode === 'otp' &&
           (!challenge ? (
             <Form
               label="Send verification code"
@@ -104,7 +110,14 @@ export default function Auth({ onLogin }) {
                 setChallenge((await api('/auth/challenge', { method: 'POST', body: data })).challengeId);
               }}
             >
-              <Field label="Mobile number" name="phone" type="tel" required />
+              <Field
+                label="Mobile number with country code"
+                name="phone"
+                type="tel"
+                placeholder="+919876543210"
+                pattern="\+[1-9][0-9]{7,14}"
+                required
+              />
               <Field label="Purpose">
                 <select name="purpose">
                   <option value="LOGIN">Sign in with SMS</option>
@@ -125,12 +138,23 @@ export default function Auth({ onLogin }) {
                 )
               }
             >
-              <Field label="Six-digit code" name="code" inputMode="numeric" pattern="[0-9]{6}" required />
+              <Field
+                label="Six-digit code"
+                name="code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                required
+              />
+              <Button secondary onClick={() => setChallenge(null)}>
+                Request another code
+              </Button>
               {purpose === 'RESET' && (
                 <Field label="New password" name="password" type="password" minLength="10" required />
               )}
             </Form>
-          ))}
+          ))
+        )}
       </section>
     </div>
   );

@@ -1,5 +1,9 @@
 const messages = {
   en: {
+    smsStopped:
+      'FarmIQ SMS notifications stopped. Reply START to subscribe again. In-app notifications remain available.',
+    smsStarted: 'FarmIQ booking SMS notifications enabled. Reply STOP to unsubscribe or HELP for assistance.',
+    bookingNotice: 'FarmIQ: {machine} — {status}. Booking {id}. Open FarmIQ for details.',
     register: 'Register your mobile number with FarmIQ before using SMS bookings.',
     noBookings: 'You have no bookings yet.',
     bookHelp:
@@ -19,6 +23,11 @@ const messages = {
       'Request {id} sent to owner. Total INR {total}; advance INR {advance} after approval. Sign in to pay securely.',
   },
   ta: {
+    smsStopped:
+      'FarmIQ SMS அறிவிப்புகள் நிறுத்தப்பட்டன. மீண்டும் பெற START என அனுப்பவும். செயலி அறிவிப்புகள் தொடர்ந்து கிடைக்கும்.',
+    smsStarted:
+      'FarmIQ முன்பதிவு SMS அறிவிப்புகள் செயல்படுத்தப்பட்டன. நிறுத்த STOP, உதவிக்கு HELP என அனுப்பவும்.',
+    bookingNotice: 'FarmIQ: {machine} — {status}. முன்பதிவு {id}. விவரங்களுக்கு FarmIQ-ஐ திறக்கவும்.',
     register: 'SMS முன்பதிவைப் பயன்படுத்த முதலில் உங்கள் கைபேசி எண்ணை FarmIQ-ல் பதிவு செய்யவும்.',
     noBookings: 'உங்களிடம் இன்னும் முன்பதிவுகள் இல்லை.',
     bookHelp:
@@ -38,6 +47,9 @@ const messages = {
       'கோரிக்கை {id} உரிமையாளருக்கு அனுப்பப்பட்டது. மொத்தம் {total} ரூபாய்; ஒப்புதலுக்குப் பின் முன்பணம் {advance} ரூபாய். பாதுகாப்பாகச் செலுத்த உள்நுழையவும்.',
   },
   hi: {
+    smsStopped: 'FarmIQ SMS सूचनाएँ बंद हैं। फिर शुरू करने के लिए START भेजें। ऐप की सूचनाएँ उपलब्ध रहेंगी।',
+    smsStarted: 'FarmIQ बुकिंग SMS सूचनाएँ चालू हैं। बंद करने के लिए STOP और सहायता के लिए HELP भेजें।',
+    bookingNotice: 'FarmIQ: {machine} — {status}। बुकिंग {id}। जानकारी के लिए FarmIQ खोलें।',
     register: 'SMS बुकिंग उपयोग करने से पहले अपना मोबाइल नंबर FarmIQ में पंजीकृत करें।',
     noBookings: 'आपकी अभी कोई बुकिंग नहीं है।',
     bookHelp:

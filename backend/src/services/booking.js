@@ -94,11 +94,19 @@ async function record(tx, b, user, status, note, data = {}) {
     });
     const recipient = await tx.user.findUnique({
       where: { id: userId },
-      select: { active: true, preferences: true },
+      select: { active: true, preferences: true, language: true },
     });
     if (recipient?.active && recipient.preferences?.sms)
       await tx.messageOutbox.create({
-        data: { notificationId: notification.id, userId, body: notification.message },
+        data: {
+          notificationId: notification.id,
+          userId,
+          body: require('../i18n').text('bookingNotice', recipient.language, {
+            machine: b.machinery.name,
+            status: require('../i18n').status(status, recipient.language),
+            id: b.id,
+          }),
+        },
       });
   }
   return result;

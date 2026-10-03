@@ -1,6 +1,5 @@
 const router = require('express').Router();
 const crypto = require('node:crypto');
-const fs = require('node:fs');
 const path = require('node:path');
 const multer = require('multer');
 const { prisma } = require('../config');
@@ -20,6 +19,7 @@ const {
   cancellation,
 } = require('../domain');
 const booking = require('../services/booking');
+const tutorials = require('../services/tutorials');
 const { demoMachines, demoDrivers, demoOperators, machineData } = require('../demo-data');
 const { calculateDistance } = require('../utils/geo');
 const admin = requireAuth(['ADMIN']),
@@ -45,6 +45,7 @@ router.get('/capabilities', (req, res) =>
   res.json({
     payments: process.env.PAYMENT_MODE || 'sandbox',
     sms: require('../services/outbox').configuration().enabled,
+    smsLogin: require('../services/verify').configured(),
     ivr: !!process.env.PUBLIC_WEBHOOK_ORIGIN,
     ai: !!process.env.GEMINI_API_KEY && !!process.env.GEMINI_MODEL,
     version: '2.0',
@@ -135,7 +136,11 @@ router.get('/operators', async (req, res) =>
   ),
 );
 router.get('/tutorials', async (req, res) =>
-  res.json(await prisma.tutorial.findMany({ where: { published: true } })),
+  res.json(
+    (await prisma.tutorial.findMany({ where: { published: true }, orderBy: { title: 'asc' } })).map(
+      tutorials.response,
+    ),
+  ),
 );
 router.use(requireAuth());
 const addressCache = new Map();
@@ -162,7 +167,8 @@ router.get('/location/address', async (req, res) => {
   res.json({ address: result.display_name });
 });
 router.post('/demo/relocate', requireAuth(['FARMER']), async (req, res) => {
-  if (req.user.accountId !== 'DEMO-FARMER') fail(403, 'Demo relocation is unavailable');
+  if (process.env.NODE_ENV === 'production' || req.user.accountId !== 'DEMO-FARMER')
+    fail(403, 'Demo relocation is unavailable');
   const point = z.object({ latitude: lat, longitude: lng }).parse(req.body);
   const owner = await prisma.user.findUnique({ where: { accountId: 'DEMO-OWNER' } });
   const baseDriver = await prisma.user.findUnique({ where: { accountId: 'DEMO-DRIVER' } });
@@ -525,8 +531,6 @@ router.post('/tickets', async (req, res) => {
   if (i.bookingId) await booking.get(prisma, i.bookingId, req.user);
   res.status(201).json(await prisma.supportTicket.create({ data: { ...i, userId: req.user.id } }));
 });
-const uploadDir = path.resolve(__dirname, '../../uploads');
-fs.mkdirSync(uploadDir, { recursive: true });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
 router.post('/documents', upload.single('file'), async (req, res) => {
   const kind = z.enum(['IDENTITY', 'LICENCE', 'OWNERSHIP', 'INSPECTION']).parse(req.body.kind);
@@ -540,18 +544,26 @@ router.post('/documents', upload.single('file'), async (req, res) => {
   const pdf = bytes.subarray(0, 5).toString() === '%PDF-';
   if (!(png || jpg || (pdf && kind !== 'INSPECTION')))
     fail(400, 'Use a JPEG, PNG or PDF; inspection evidence must be a photograph');
-  const storageKey = crypto.randomUUID() + (png ? '.png' : jpg ? '.jpg' : '.pdf');
-  fs.writeFileSync(path.join(uploadDir, storageKey), bytes, { flag: 'wx' });
-  res.status(201).json(
-    await prisma.document.create({
+  await require('../services/scan').scan(bytes);
+  const storage = require('../services/storage');
+  const storageKey = await storage.save(bytes, png ? 'png' : jpg ? 'jpg' : 'pdf');
+  let document;
+  try {
+    document = await prisma.document.create({
       data: {
         userId: req.user.id,
         kind,
         filename: path.basename(f.originalname).slice(0, 150),
         storageKey,
       },
-    }),
-  );
+    });
+  } catch (error) {
+    await storage
+      .remove(storageKey)
+      .catch(() => console.error('Upload rollback requires storage reconciliation'));
+    throw error;
+  }
+  res.status(201).json(document);
 });
 router.get('/documents', async (req, res) =>
   res.json(
@@ -573,7 +585,7 @@ router.get('/documents/:id', async (req, res) => {
       fail(404, 'File not found');
   }
   res.set('Cache-Control', 'no-store');
-  res.download(path.join(uploadDir, d.storageKey), d.filename);
+  await require('../services/storage').download(d, res);
 });
 router.get('/progress', async (req, res) =>
   res.json(await prisma.tutorialProgress.findMany({ where: { userId: req.user.id } })),
@@ -773,39 +785,20 @@ router.post('/admin/operators', admin, async (req, res) => {
   );
 });
 router.get('/admin/tutorials', admin, async (req, res) => res.json(await prisma.tutorial.findMany()));
-const tutorialFields = z.object({
-  title: text(200),
-  category: text(40),
-  language: z.enum(['en', 'ta', 'hi']),
-  summary: text(2000),
-  steps: z.array(text(1000)).min(1).max(30),
-  videoUrl: url.nullable().optional(),
-  audioUrl: url.nullable().optional(),
-  captionsUrl: url.nullable().optional(),
-  sourceUrl: url,
-  published: z.boolean(),
-});
-const captionCheck = (value, context) => {
-  if (value.videoUrl && !value.captionsUrl)
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['captionsUrl'],
-      message: 'Captions are required for published video tutorials',
-    });
-};
-const tutorialSchema = tutorialFields.superRefine(captionCheck);
-const tutorialPatchSchema = tutorialFields.partial().superRefine(captionCheck);
 router.post('/admin/tutorials', admin, async (req, res) =>
-  res.status(201).json(await prisma.tutorial.create({ data: tutorialSchema.parse(req.body) })),
+  res.status(201).json(await prisma.tutorial.create({ data: tutorials.schema.parse(req.body) })),
 );
-router.patch('/admin/tutorials/:id', admin, async (req, res) =>
+router.patch('/admin/tutorials/:id', admin, async (req, res) => {
+  const patch = tutorials.fields.partial().parse(req.body);
   res.json(
-    await prisma.tutorial.update({
-      where: { id: req.params.id },
-      data: tutorialPatchSchema.parse(req.body),
+    await booking.serial(async (tx) => {
+      const existing = await tx.tutorial.findUnique({ where: { id: req.params.id } });
+      if (!existing) fail(404, 'Tutorial not found');
+      const data = tutorials.schema.parse({ ...existing, ...patch });
+      return tx.tutorial.update({ where: { id: existing.id }, data });
     }),
-  ),
-);
+  );
+});
 router.post('/admin/bookings/:id/assign', admin, async (req, res) => {
   const { driverId, note } = z.object({ driverId: z.string().uuid(), note: text(1000) }).parse(req.body);
   const b = await booking.serial(async (tx) => {

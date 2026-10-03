@@ -11,18 +11,12 @@ const xml = (value) =>
     (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c],
   );
 function signatureValid(url, params, signature, secret) {
-  if (!secret || !signature) return false;
-  const value =
-    url +
-    Object.keys(params)
-      .sort()
-      .map((k) => k + params[k])
-      .join('');
-  const expected = crypto.createHmac('sha1', secret).update(value).digest('base64');
-  return (
-    signature.length === expected.length &&
-    crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
-  );
+  if (!secret || typeof signature !== 'string') return false;
+  try {
+    return require('twilio').validateRequest(secret, signature, url, params);
+  } catch {
+    return false;
+  }
 }
 router.use('/channels', express.urlencoded({ extended: false, limit: '20kb' }));
 router.use('/channels', async (req, res, next) => {
@@ -57,7 +51,22 @@ router.post('/channels/sms', async (req, res) => {
   const u = req.channelUser,
     body = String(req.body.Body || '').trim();
   if (u) {
-    if (/^STATUS$/i.test(body)) {
+    const optOut =
+      req.body.OptOutType === 'STOP' ||
+      /^(STOP|STOPALL|UNSUBSCRIBE|CANCEL|END|QUIT|நிறுத்து|बंद)$/i.test(body);
+    const optIn = req.body.OptOutType === 'START' || /^(START|UNSTOP|தொடங்கு|शुरू)$/i.test(body);
+    if (optOut || optIn) {
+      if (!/^SM[a-f0-9]{32}$/i.test(req.body.MessageSid || '')) fail(400, 'Invalid message reference');
+      await require('../services/preferences').update(
+        u.id,
+        { preferences: { sms: !optOut } },
+        'sms',
+        `consent-${req.body.MessageSid}`,
+      );
+      reply = i18n.text(optOut ? 'smsStopped' : 'smsStarted', lang);
+      // Advanced Opt-Out sends its own confirmation; avoid a second reply.
+      if (req.body.OptOutType) return res.type('text/xml').send('<Response/>');
+    } else if (/^STATUS$/i.test(body)) {
       const b = await prisma.booking.findFirst({
         where: require('../domain').scope(u),
         orderBy: { createdAt: 'desc' },
@@ -95,7 +104,7 @@ router.post('/channels/sms', async (req, res) => {
           else throw e;
         }
       }
-    } else if (/^HELP(?:\s|$)/i.test(body)) {
+    } else if (/^(HELP|உதவி|मदद)(?:\s|$)/i.test(body)) {
       const ticketId = `sms-${String(req.body.MessageSid).slice(0, 80)}`;
       await prisma.supportTicket.upsert({
         where: { id: ticketId },

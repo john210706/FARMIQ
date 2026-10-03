@@ -1,23 +1,25 @@
 # FarmIQ UI/UX Specification
 
+> Original design reference, not a current feature checklist. See [implementation status](implementation-status.md) for the implemented role-specific workspaces and remaining work.
+
 ## Design direction
 
 FarmIQ should feel dependable, practical, and rooted in agriculture without looking old-fashioned. The interface uses deep forest green for trust, leaf green for actions and progress, warm cream for a low-glare background, and a small amount of harvest gold for attention states.
 
 ## Design system
 
-| Element | Decision |
-| --- | --- |
-| Primary colour | Forest `#153F2E` |
-| Action colour | Leaf `#3F7B4F` |
-| Light surface | Cream `#F7F6EF` and paper `#FFFEFA` |
-| Accent | Harvest gold `#D99D3E` |
-| Main text | Ink `#18231D` |
-| Body font | Arial/Helvetica for clear cross-device reading |
-| Display font | Georgia for welcoming page headlines |
-| Icons | Lucide line icons, always paired with labels for important actions |
-| Shape | Mostly 7-13px corners; larger radius reserved for the main welcome panel |
-| Spacing | 8px base rhythm with 32-36px desktop page margins |
+| Element        | Decision                                                                 |
+| -------------- | ------------------------------------------------------------------------ |
+| Primary colour | Forest `#153F2E`                                                         |
+| Action colour  | Leaf `#3F7B4F`                                                           |
+| Light surface  | Cream `#F7F6EF` and paper `#FFFEFA`                                      |
+| Accent         | Harvest gold `#D99D3E`                                                   |
+| Main text      | Ink `#18231D`                                                            |
+| Body font      | Arial/Helvetica for clear cross-device reading                           |
+| Display font   | Georgia for welcoming page headlines                                     |
+| Icons          | Lucide line icons, always paired with labels for important actions       |
+| Shape          | Mostly 7-13px corners; larger radius reserved for the main welcome panel |
+| Spacing        | 8px base rhythm with 32-36px desktop page margins                        |
 
 ## Information architecture
 

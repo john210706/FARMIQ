@@ -1,6 +1,6 @@
 # FarmIQ Project Requirements
 
-> Scope note: this document is planning only. Day 1 and Day 2 implement a React UI prototype with sample data. The Node.js/Express API and PostgreSQL database through Supabase will be created in a later phase.
+> Historical planning document: the architecture and future-tense statements below describe the original prototype plan, not today's implementation. The Express/PostgreSQL application now exists. Use [implementation status](implementation-status.md) for current capabilities and remaining work.
 
 ## Planned technical architecture
 
@@ -112,29 +112,29 @@ Small-scale farmers often cannot afford to own modern agricultural machinery. Ex
 
 ## 8. Future database requirements (planning only)
 
-| Table | Purpose | Essential fields |
-| --- | --- | --- |
-| `users` | Shared identity for all roles | id, mobile, password_hash/otp_status, role, full_name, language, verification_status, active, created_at |
-| `farmer_profiles` | Farmer-specific details | user_id, farm_name, acreage, crop_types, primary_address_id |
-| `owner_profiles` | Owner and business details | user_id, business_name, tax_or_id_number, payout_account_status |
-| `delivery_profiles` | Delivery eligibility | user_id, vehicle_number, licence_number, availability_status, rating |
-| `addresses` | Farm, owner, and service locations | id, user_id, label, address, village, district, state, postal_code, latitude, longitude |
-| `machine_categories` | Controlled machinery types | id, name, description, active |
-| `machines` | Equipment catalogue | id, owner_id, category_id, name, model, horsepower, hourly_rate, daily_rate, deposit, operator_available, status, latitude, longitude |
-| `machine_media` | Machine photos/documents | id, machine_id, file_url, media_type, sort_order |
-| `machine_availability` | Available or blocked time ranges | id, machine_id, starts_at, ends_at, availability_type, reason |
-| `bookings` | Rental transaction | id, farmer_id, machine_id, starts_at, ends_at, duration_hours, status, delivery_address_id, operator_required, price_snapshot, advance_amount, created_at |
-| `booking_status_history` | Auditable state changes | id, booking_id, old_status, new_status, changed_by, note, changed_at |
-| `delivery_jobs` | Pickup and drop-off work | id, booking_id, delivery_person_id, pickup_address_id, drop_address_id, status, estimated_arrival, actual_arrival |
-| `delivery_events` | Tracking milestones | id, delivery_job_id, event_type, latitude, longitude, note, created_at |
-| `payments` | Payment records | id, booking_id, payer_id, payment_type, provider_reference, amount, status, paid_at |
-| `operators` | Verified equipment operators | id, user_id, skills, certification_status, hourly_rate, active |
-| `booking_operators` | Operator assigned to a booking | booking_id, operator_id, hours, amount, status |
-| `inspections` | Condition and handover evidence | id, booking_id, stage, inspector_id, condition_notes, media_url, confirmed_at |
-| `reviews` | Post-rental trust signal | id, booking_id, reviewer_id, reviewee_id, rating, comment, created_at |
-| `tutorials` | Training catalogue | id, category_id, title, language, format, content_url, offline_enabled |
-| `support_tickets` | Complaints and help requests | id, raised_by, booking_id, category, priority, status, assigned_admin_id, resolution |
-| `notifications` | In-app/SMS updates | id, user_id, channel, template, payload, delivery_status, created_at |
+| Table                    | Purpose                            | Essential fields                                                                                                                                          |
+| ------------------------ | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`                  | Shared identity for all roles      | id, mobile, password_hash/otp_status, role, full_name, language, verification_status, active, created_at                                                  |
+| `farmer_profiles`        | Farmer-specific details            | user_id, farm_name, acreage, crop_types, primary_address_id                                                                                               |
+| `owner_profiles`         | Owner and business details         | user_id, business_name, tax_or_id_number, payout_account_status                                                                                           |
+| `delivery_profiles`      | Delivery eligibility               | user_id, vehicle_number, licence_number, availability_status, rating                                                                                      |
+| `addresses`              | Farm, owner, and service locations | id, user_id, label, address, village, district, state, postal_code, latitude, longitude                                                                   |
+| `machine_categories`     | Controlled machinery types         | id, name, description, active                                                                                                                             |
+| `machines`               | Equipment catalogue                | id, owner_id, category_id, name, model, horsepower, hourly_rate, daily_rate, deposit, operator_available, status, latitude, longitude                     |
+| `machine_media`          | Machine photos/documents           | id, machine_id, file_url, media_type, sort_order                                                                                                          |
+| `machine_availability`   | Available or blocked time ranges   | id, machine_id, starts_at, ends_at, availability_type, reason                                                                                             |
+| `bookings`               | Rental transaction                 | id, farmer_id, machine_id, starts_at, ends_at, duration_hours, status, delivery_address_id, operator_required, price_snapshot, advance_amount, created_at |
+| `booking_status_history` | Auditable state changes            | id, booking_id, old_status, new_status, changed_by, note, changed_at                                                                                      |
+| `delivery_jobs`          | Pickup and drop-off work           | id, booking_id, delivery_person_id, pickup_address_id, drop_address_id, status, estimated_arrival, actual_arrival                                         |
+| `delivery_events`        | Tracking milestones                | id, delivery_job_id, event_type, latitude, longitude, note, created_at                                                                                    |
+| `payments`               | Payment records                    | id, booking_id, payer_id, payment_type, provider_reference, amount, status, paid_at                                                                       |
+| `operators`              | Verified equipment operators       | id, user_id, skills, certification_status, hourly_rate, active                                                                                            |
+| `booking_operators`      | Operator assigned to a booking     | booking_id, operator_id, hours, amount, status                                                                                                            |
+| `inspections`            | Condition and handover evidence    | id, booking_id, stage, inspector_id, condition_notes, media_url, confirmed_at                                                                             |
+| `reviews`                | Post-rental trust signal           | id, booking_id, reviewer_id, reviewee_id, rating, comment, created_at                                                                                     |
+| `tutorials`              | Training catalogue                 | id, category_id, title, language, format, content_url, offline_enabled                                                                                    |
+| `support_tickets`        | Complaints and help requests       | id, raised_by, booking_id, category, priority, status, assigned_admin_id, resolution                                                                      |
+| `notifications`          | In-app/SMS updates                 | id, user_id, channel, template, payload, delivery_status, created_at                                                                                      |
 
 ## 9. Key relationships
 
