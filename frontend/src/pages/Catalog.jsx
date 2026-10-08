@@ -29,13 +29,15 @@ export default function Catalog({ navigate, language, lowData }) {
     setGeoError('');
     try {
       const point = await currentLocation();
-      if (isDemoFarmer) await api('/demo/relocate', { method: 'POST', body: point });
+      const prepared = isDemoFarmer ? await api('/demo/relocate', { method: 'POST', body: point }) : null;
       const value = { latitude: point.latitude, longitude: point.longitude };
       sessionStorage.setItem('farmiq-nearby-location', JSON.stringify(value));
       setCoords(value);
       setLocationVersion((version) => version + 1);
       setLocationStatus(
-        isDemoFarmer ? '9 nearby demo machines are ready to book.' : 'Nearby machinery updated.',
+        prepared
+          ? `${prepared.machineCount} nearby demo machines are ready to book.`
+          : 'Nearby machinery updated.',
       );
     } catch (error) {
       setGeoError(`${error.message}. You can still browse all listings.`);
@@ -60,7 +62,7 @@ export default function Catalog({ navigate, language, lowData }) {
       ...(coords ? { lat: coords.latitude, lng: coords.longitude } : {}),
       ...(date ? { startsAt: new Date(date).toISOString(), hours } : {}),
     });
-  const { data, error } = useData(path, locationVersion, true);
+  const { data, error, reload } = useData(path, locationVersion, true);
   const machines = data
     ? [...data].sort((a, b) =>
         sort === 'price'
@@ -174,7 +176,7 @@ export default function Catalog({ navigate, language, lowData }) {
           </div>
         </Panel>
       )}
-      <State data={data} error={error}>
+      <State data={data} error={error} retry={reload}>
         {map && (
           <Suspense fallback={<p>Loading map…</p>}>
             <Map machines={machines} />
@@ -186,7 +188,16 @@ export default function Catalog({ navigate, language, lowData }) {
           <div className="machine-grid">
             {machines.map((m) => (
               <article className="machine-card" key={m.id}>
-                {!lowData && <img src={m.imageUrl} alt={m.name} loading="lazy" width="500" height="300" />}
+                {!lowData && (
+                  <img
+                    src={m.imageUrl}
+                    alt={m.name}
+                    loading="lazy"
+                    decoding="async"
+                    width="500"
+                    height="300"
+                  />
+                )}
                 <div className="machine-body">
                   <div className="row spread">
                     <Badge>{m.category}</Badge>
@@ -230,7 +241,7 @@ export default function Catalog({ navigate, language, lowData }) {
 }
 export function MachineDetail({ id, navigate }) {
   const [machineVersion, setMachineVersion] = useState(0);
-  const { data: m, error } = useData(`/machinery/${id}`, machineVersion, true);
+  const { data: m, error, reload } = useData(`/machinery/${id}`, machineVersion, true);
   const { data: operators } = useData('/operators', machineVersion, true);
   const { data: addresses } = useData(getSession() ? '/addresses' : null);
   const key = `farmiq-draft-${getSession()?.user.id || 'guest'}-${id}`;
@@ -243,16 +254,22 @@ export function MachineDetail({ id, navigate }) {
     }),
     [pricing, setPricing] = useState(null),
     [saved, setSaved] = useState(false),
-    [demoReady, setDemoReady] = useState(false);
+    [demoReady, setDemoReady] = useState(false),
+    [draftError, setDraftError] = useState('');
   const update = (name, value) => setDraft((prev) => ({ ...prev, [name]: value }));
   useEffect(() => {
-    localStorage.setItem(key, JSON.stringify(draft));
+    try {
+      localStorage.setItem(key, JSON.stringify(draft));
+      setDraftError('');
+    } catch {
+      setDraftError('Draft could not be saved on this device. Keep this page open.');
+    }
   }, [draft, key]);
   useEffect(() => {
     setPricing(null);
   }, [draft.durationHours, draft.operatorId]);
   return (
-    <State data={m} error={error}>
+    <State data={m} error={error} retry={reload}>
       {m && (
         <>
           <Button secondary onClick={() => navigate('catalog')}>
@@ -320,6 +337,11 @@ export function MachineDetail({ id, navigate }) {
               </Panel>
             </section>
             <Panel title="Plan your rental">
+              {draftError && (
+                <p className="notice error" role="alert">
+                  {draftError}
+                </p>
+              )}
               <p className="price">
                 {money(m.pricePerHour)} <small>/ hour</small>
               </p>
@@ -333,6 +355,7 @@ export function MachineDetail({ id, navigate }) {
                   label="Send request to owner"
                   onSubmit={async (_, form) => {
                     if (!navigator.onLine) {
+                      if (draftError) throw new Error(draftError);
                       setSaved(true);
                       return;
                     }
@@ -351,7 +374,11 @@ export function MachineDetail({ id, navigate }) {
                     };
                     update('requestKey', input.requestKey);
                     const b = await api('/bookings', { method: 'POST', body: input });
-                    localStorage.removeItem(key);
+                    try {
+                      localStorage.removeItem(key);
+                    } catch {
+                      /* Booking is already confirmed; storage failure must not encourage a duplicate. */
+                    }
                     navigate('booking', b.id);
                   }}
                 >
@@ -421,7 +448,8 @@ export function MachineDetail({ id, navigate }) {
                   />
                   {demoReady && (
                     <p className="notice" role="status">
-                      Demo machinery and the nearest delivery partner are ready near your farm.
+                      Demo locations refreshed. Active rentals keep their original pickup and driver
+                      locations.
                     </p>
                   )}
                   <Field label="Verified operator">
@@ -466,9 +494,12 @@ export function MachineDetail({ id, navigate }) {
                     equipment at handover, return it on time, and report damage. Farmer cancellation within 24
                     hours may cost 10% of the rental total, capped at payments made.
                   </label>
-                  <p className="muted">
-                    Draft saved on this device. Offline requests remain drafts until you reconnect and submit.
-                  </p>
+                  {!draftError && (
+                    <p className="muted">
+                      Draft saved on this device. Offline requests remain drafts until you reconnect and
+                      submit.
+                    </p>
+                  )}
                   {saved && (
                     <p role="status" className="notice">
                       You are offline. Draft saved; reconnect to submit.

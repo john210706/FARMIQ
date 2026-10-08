@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import {
   Tractor,
   LayoutDashboard,
@@ -14,16 +14,19 @@ import {
   Menu,
 } from 'lucide-react';
 import { api, getSession, saveSession, money, when } from './lib/api';
-import { useData, State, Panel, Button, Action, Badge, Empty } from './ui';
+import { useData, State, Panel, Button, Action, Badge, Empty, PageBoundary } from './ui';
 import Auth from './pages/Auth';
-import Catalog, { MachineDetail } from './pages/Catalog';
-import Bookings, { BookingDetail } from './pages/Bookings';
-import Fleet, { Admin } from './pages/Manage';
-import Account from './pages/Account';
-import Community from './pages/Community';
-import Learning from './pages/Learning';
+const Catalog = lazy(() => import('./pages/Catalog'));
+const MachineDetail = lazy(() => import('./pages/Catalog').then((m) => ({ default: m.MachineDetail })));
+const Bookings = lazy(() => import('./pages/Bookings'));
+const BookingDetail = lazy(() => import('./pages/Bookings').then((m) => ({ default: m.BookingDetail })));
+const Fleet = lazy(() => import('./pages/Manage'));
+const Admin = lazy(() => import('./pages/Manage').then((m) => ({ default: m.Admin })));
+const Account = lazy(() => import('./pages/Account'));
+const Community = lazy(() => import('./pages/Community'));
+const Learning = lazy(() => import('./pages/Learning'));
 import './workspace.css';
-import { Localizer } from './i18n';
+import { Localizer, tr } from './i18n';
 import { currentLocation } from './location';
 const labels = {
   en: {
@@ -167,7 +170,7 @@ export default function Workspace() {
     };
   }, [user?.id]);
   const unreadBadge = unread > 0 && (
-    <span className="notification-count" aria-label={`${unread} unread notifications`}>
+    <span className="notification-count" aria-label={`${unread} ${tr('Unread notifications', language)}`}>
       {unread > 99 ? '99+' : unread}
     </span>
   );
@@ -297,7 +300,9 @@ export default function Workspace() {
             </div>
           )}
           <main id="main-content" className="main" tabIndex="-1">
-            {content}
+            <PageBoundary key={`${screen}/${page.id || ''}`}>
+              <Suspense fallback={<State data={null} />}>{content}</Suspense>
+            </PageBoundary>
           </main>
           <footer className="footer">
             FarmIQ · Equipment access for farming communities{' '}
@@ -548,9 +553,11 @@ function Notifications({ navigate }) {
     setV((value) => value + 1);
     window.dispatchEvent(new Event('notifications-changed'));
   };
-  const { data, error } = useData('/notifications', v);
+  const { data, error, reload } = useData('/notifications', v, true);
   useEffect(() => {
-    const timer = setInterval(() => setV((current) => current + 1), 15000);
+    const timer = setInterval(() => {
+      if (navigator.onLine && document.visibilityState === 'visible') setV((current) => current + 1);
+    }, 15000);
     return () => clearInterval(timer);
   }, []);
   return (
@@ -569,7 +576,7 @@ function Notifications({ navigate }) {
           </Action>
         )}
       </div>
-      <State data={data} error={error}>
+      <State data={data} error={error} retry={reload}>
         {data?.length ? (
           data.map((n) => (
             <div className="list-row" key={n.id}>

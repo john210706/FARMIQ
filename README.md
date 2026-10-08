@@ -2,6 +2,8 @@
 
 A React/Vite and Express/PostgreSQL machinery-rental application with farmer, owner, delivery-partner and administrator workflows. The active frontend lives in `frontend/`; the root is an npm workspace. See [implementation status](docs/implementation-status.md) for the exact implemented and outstanding scope.
 
+For a no-payment, multi-role demonstration, follow the [demo walkthrough](docs/demo-walkthrough.md). See [8 October improvements](docs/october-8-improvements.md) for performance, recovery, tutorial and administration updates.
+
 ## Local setup
 
 Use Node.js 22+ and PostgreSQL 16+. From the repository root:

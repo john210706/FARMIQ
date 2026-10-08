@@ -10,6 +10,54 @@ export const getLanguage = () => activeLanguage;
 
 const rows = [
   [
+    'This page could not load. Reconnect and reload the page.',
+    'இந்தப் பக்கத்தை ஏற்ற முடியவில்லை. இணையத்தில் இணைந்து பக்கத்தை மீண்டும் ஏற்றவும்.',
+    'यह पेज लोड नहीं हुआ। इंटरनेट से जुड़कर पेज फिर लोड करें।',
+  ],
+  [
+    'Demo locations refreshed. Active rentals keep their original pickup and driver locations.',
+    'மாதிரி இருப்பிடங்கள் புதுப்பிக்கப்பட்டன. நடப்பு வாடகைகளின் எடுப்பு மற்றும் ஓட்டுநர் இருப்பிடங்கள் மாறாது.',
+    'डेमो स्थान अपडेट हुए। सक्रिय किराए के पिकअप और चालक के स्थान नहीं बदले।',
+  ],
+  ['Try again', 'மீண்டும் முயற்சி', 'फिर कोशिश करें'],
+  ['Unread notifications', 'படிக்காத அறிவிப்புகள்', 'अपठित सूचनाएँ'],
+  [
+    'You are offline. Reconnect and submit again; no changes were sent.',
+    'இணையம் இல்லை. இணைந்த பின் மீண்டும் அனுப்பவும்; மாற்றங்கள் அனுப்பப்படவில்லை.',
+    'आप ऑफ़लाइन हैं। जुड़ने के बाद फिर भेजें; कोई बदलाव नहीं भेजा गया।',
+  ],
+  [
+    'Draft could not be saved on this device. Keep this page open.',
+    'இந்தச் சாதனத்தில் வரைவைச் சேமிக்க முடியவில்லை. இந்தப் பக்கத்தைத் திறந்து வைக்கவும்.',
+    'इस डिवाइस पर ड्राफ़्ट सहेजा नहीं गया। यह पेज खुला रखें।',
+  ],
+  ['Search loaded records', 'ஏற்றப்பட்ட பதிவுகளைத் தேடு', 'लोड किए गए रिकॉर्ड खोजें'],
+  ['All statuses', 'அனைத்து நிலைகள்', 'सभी स्थितियाँ'],
+  ['Loaded records only', 'ஏற்றப்பட்ட பதிவுகள் மட்டும்', 'केवल लोड किए गए रिकॉर्ड'],
+  ['Export summary', 'சுருக்கத்தைப் பதிவிறக்கு', 'सारांश डाउनलोड करें'],
+  ['No matching records.', 'பொருந்தும் பதிவுகள் இல்லை.', 'कोई मेल खाता रिकॉर्ड नहीं।'],
+  [
+    'No matching learning guides.',
+    'பொருந்தும் பயிற்சி வழிகாட்டிகள் இல்லை.',
+    'कोई मेल खाती सीखने की मार्गदर्शिका नहीं।',
+  ],
+  ['Rental journey', 'வாடகைப் பயணம்', 'किराए की प्रक्रिया'],
+  ['Request', 'கோரிக்கை', 'अनुरोध'],
+  ['Owner approval', 'உரிமையாளர் ஒப்புதல்', 'मालिक की स्वीकृति'],
+  ['Advance payment', 'முன்பணம்', 'अग्रिम भुगतान'],
+  ['Driver pickup', 'ஓட்டுநர் எடுப்பு', 'चालक पिकअप'],
+  ['Farmer handover', 'விவசாயி ஒப்படைப்பு', 'किसान को सुपुर्दगी'],
+  ['Rental use', 'வாடகைப் பயன்பாடு', 'किराए पर उपयोग'],
+  ['Return inspection', 'திரும்பப்பெறும் ஆய்வு', 'वापसी निरीक्षण'],
+  ['Owner handover', 'உரிமையாளர் ஒப்படைப்பு', 'मालिक को सुपुर्दगी'],
+  ['Download recording script', 'பதிவு உரையைப் பதிவிறக்கு', 'रिकॉर्डिंग स्क्रिप्ट डाउनलोड करें'],
+  ['Download draft captions', 'வரைவு வசனங்களைப் பதிவிறக்கு', 'कैप्शन ड्राफ़्ट डाउनलोड करें'],
+  [
+    'Draft captions use suggested timing. Align them to your recording before publishing.',
+    'வரைவு வசனங்களில் பரிந்துரைக்கப்பட்ட நேரம் உள்ளது. வெளியிடும் முன் உங்கள் பதிவுடன் பொருத்தவும்.',
+    'कैप्शन में सुझाया समय है। प्रकाशित करने से पहले रिकॉर्डिंग से मिलाएँ।',
+  ],
+  [
     'Too many requests. Please wait a minute and try again.',
     'அதிக கோரிக்கைகள். ஒரு நிமிடம் காத்திருந்து மீண்டும் முயற்சிக்கவும்.',
     'बहुत अधिक अनुरोध हैं। एक मिनट बाद फिर कोशिश करें।',
@@ -1232,6 +1280,14 @@ for (const [en, ta, hi] of errorRows) {
 
 const patterns = {
   ta: [
+    [
+      /^Nearest eligible driver: ([\d.]+) km from owner pickup; selected from (\d+) available candidates?$/,
+      'அருகிலுள்ள தகுதியான ஓட்டுநர்: உரிமையாளர் எடுப்பு இடத்திலிருந்து $1 கி.மீ.; கிடைக்கும் $2 ஓட்டுநர்களில் தேர்ந்தெடுக்கப்பட்டார்',
+    ],
+    [
+      /^(\d+) nearby demo machines are ready to book\.$/,
+      '$1 அருகிலுள்ள மாதிரி இயந்திரங்களை முன்பதிவு செய்யலாம்.',
+    ],
     [/^Hello, (.+)\.$/, 'வணக்கம், $1.'],
     [/^Compare equipment \((\d+)\/3\)$/, 'இயந்திரங்களை ஒப்பிடு ($1/3)'],
     [/^Photo (\d+)$/, 'புகைப்படம் $1'],
@@ -1249,6 +1305,11 @@ const patterns = {
     [/^(.+) inspection is recorded\.$/, '$1 ஆய்வு பதிவு செய்யப்பட்டுள்ளது.'],
   ],
   hi: [
+    [
+      /^Nearest eligible driver: ([\d.]+) km from owner pickup; selected from (\d+) available candidates?$/,
+      'निकटतम पात्र चालक: मालिक के पिकअप से $1 किमी; उपलब्ध $2 चालकों में से चुना गया',
+    ],
+    [/^(\d+) nearby demo machines are ready to book\.$/, 'पास की $1 डेमो मशीनें बुकिंग के लिए तैयार हैं।'],
     [/^Hello, (.+)\.$/, 'नमस्ते, $1।'],
     [/^Compare equipment \((\d+)\/3\)$/, 'मशीन तुलना ($1/3)'],
     [/^Photo (\d+)$/, 'तस्वीर $1'],
@@ -1291,29 +1352,41 @@ export function trError(value, language = activeLanguage) {
 }
 
 const originals = new WeakMap(),
-  rendered = new WeakMap();
+  rendered = new WeakMap(),
+  attributes = new WeakMap();
 function localizeTree(root, language) {
   if (!root) return;
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  let node;
-  while ((node = walker.nextNode())) {
-    if (['SCRIPT', 'STYLE'].includes(node.parentElement?.tagName)) continue;
+  const translateNode = (node) => {
+    if (['SCRIPT', 'STYLE'].includes(node.parentElement?.tagName)) return;
     const previous = rendered.get(node);
     if (!originals.has(node) || (previous !== undefined && node.data !== previous))
       originals.set(node, node.data);
     const next = tr(originals.get(node), language);
     if (node.data !== next) node.data = next;
     rendered.set(node, next);
+  };
+  if (root.nodeType === Node.TEXT_NODE) {
+    translateNode(root);
+    return;
   }
-  for (const element of root.querySelectorAll?.('[placeholder],[aria-label],[title]') || []) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let node;
+  while ((node = walker.nextNode())) translateNode(node);
+  const selector = '[placeholder],[aria-label],[title]';
+  for (const element of [
+    ...(root.matches?.(selector) ? [root] : []),
+    ...(root.querySelectorAll?.(selector) || []),
+  ]) {
     for (const attribute of ['placeholder', 'aria-label', 'title'])
       if (element.hasAttribute(attribute)) {
-        const key = `i18n${attribute
-          .split('-')
-          .map((part) => part[0].toUpperCase() + part.slice(1))
-          .join('')}`;
-        if (!element.dataset[key]) element.dataset[key] = element.getAttribute(attribute);
-        element.setAttribute(attribute, tr(element.dataset[key], language));
+        const values = attributes.get(element) || {};
+        const current = element.getAttribute(attribute);
+        const previous = values[attribute];
+        const original = previous && previous.rendered === current ? previous.original : current;
+        const next = tr(original, language);
+        values[attribute] = { original, rendered: next };
+        attributes.set(element, values);
+        if (current !== next) element.setAttribute(attribute, next);
       }
   }
 }
@@ -1324,8 +1397,23 @@ export function Localizer({ language, children }) {
   useLayoutEffect(() => {
     const root = ref.current;
     localizeTree(root, language);
-    const observer = new MutationObserver(() => localizeTree(root, language));
-    observer.observe(root, { childList: true, subtree: true, characterData: true });
+    const observer = new MutationObserver((records) => {
+      const changed = new Set();
+      for (const record of records) {
+        if (record.type === 'characterData' || record.type === 'attributes') changed.add(record.target);
+        else for (const node of record.addedNodes) changed.add(node);
+      }
+      for (const node of changed) if (root.contains(node)) localizeTree(node, language);
+      // Ignore our own text changes rather than rescanning the whole page a second time.
+      observer.takeRecords();
+    });
+    observer.observe(root, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['placeholder', 'aria-label', 'title'],
+    });
     return () => observer.disconnect();
   }, [language]);
   return (

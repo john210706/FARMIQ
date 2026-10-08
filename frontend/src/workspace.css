@@ -1060,3 +1060,28 @@ ol {
 .sandbox-banner {
   color: #625524;
 }
+.rental-guide {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  padding: 0;
+  list-style-position: inside;
+}
+.rental-guide li {
+  padding: 1rem;
+  border: 1px solid #dce4d5;
+  border-radius: 12px;
+}
+.rental-guide svg {
+  display: block;
+  margin: 0.5rem 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}

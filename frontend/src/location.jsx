@@ -57,11 +57,11 @@ export function LocationPicker({
     }
   }, []);
   useEffect(() => {
-    if (automatic && !automaticallyLocated.current) {
+    if (automatic && !value && !automaticallyLocated.current) {
       automaticallyLocated.current = true;
       locate();
     }
-  }, [automatic, locate]);
+  }, [automatic, locate, value]);
   return (
     <div className="stack">
       <Button secondary onClick={locate} disabled={busy}>

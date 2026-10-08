@@ -145,6 +145,21 @@ test(
       await prisma.notification.findFirst({ where: { bookingId: b.id, userId: owner.user.id } }),
       'owner must be notified when a farmer requests equipment',
     );
+    const ownerNotice = await prisma.notification.findFirst({
+      where: { bookingId: b.id, userId: owner.user.id },
+    });
+    await call(outsider.token, 'patch', `/notifications/${ownerNotice.id}`, {});
+    assert.equal(
+      (await prisma.notification.findUnique({ where: { id: ownerNotice.id } })).readAt,
+      null,
+      'another account cannot mark an owner notification read',
+    );
+    const foreignNotices = await call(outsider.token, 'get', '/notifications');
+    assert.ok(!foreignNotices.body.some((n) => n.id === ownerNotice.id));
+    assert.equal(
+      (await call(outsider.token, 'post', '/demo/relocate', { latitude: 10, longitude: 79 })).status,
+      403,
+    );
     const replay = { ...inputBooking, requestKey: b.requestKey };
     assert.equal(
       (await call(outsider.token, 'post', '/bookings', { ...replay, farmerId: winner.user.id })).status,
@@ -332,6 +347,11 @@ test(
       200,
     );
     assert.equal((await prisma.booking.findUnique({ where: { id: b.id } })).handoverCodeHash, null);
+    assert.equal(
+      (await call(owner.token, 'post', `/bookings/${b.id}/handover-code`, {})).status,
+      409,
+      'completed handover cannot issue another return code',
+    );
     const unreadCount = await call(owner.token, 'get', '/notifications/unread-count');
     assert.ok(unreadCount.body.count > 0);
     await call(owner.token, 'post', '/notifications/read-all', {});

@@ -3,7 +3,7 @@ import { api, money, when, download } from '../lib/api';
 import { useData, State, Panel, Form, Field, Action, Button, Badge, Empty } from '../ui';
 export function Finance({ admin = false }) {
   const [version, setVersion] = useState(0);
-  const { data, error } = useData('/operations/finance', version);
+  const { data, error, reload } = useData('/operations/finance', version);
   const refresh = () => setVersion((v) => v + 1);
   return (
     <Panel title="Rental settlement ledger">
@@ -52,7 +52,7 @@ export function Finance({ admin = false }) {
       >
         Export CSV
       </Button>
-      <State data={data} error={error}>
+      <State data={data} error={error} retry={reload}>
         {!data?.length && <Empty>No completed rentals yet.</Empty>}
         {data?.map((b) => (
           <div className="list-row wrap" key={b.bookingId}>
@@ -110,7 +110,7 @@ export default function Operations() {
           delivery. Distances are straight-line estimates, not road travel times. Checks run every 30 seconds
           while the API is running.
         </p>
-        <State data={config.data} error={config.error}>
+        <State data={config.data} error={config.error} retry={config.reload}>
           {config.data && (
             <Form
               key={JSON.stringify(config.data)}
@@ -177,7 +177,7 @@ export default function Operations() {
           Opted-in booking notifications only. Sending requires server configuration. UNKNOWN means the
           provider outcome needs review; it is never automatically resent.
         </p>
-        <State data={messaging.data} error={messaging.error}>
+        <State data={messaging.data} error={messaging.error} retry={messaging.reload}>
           {messaging.data && (
             <div className={messaging.data.enabled ? 'notice' : 'notice error'} role="status">
               <strong>

@@ -3,17 +3,24 @@ import { api, download, when } from '../lib/api';
 import { useData, State, Panel, Field, Button, Action, Form, Badge, Empty } from '../ui';
 import { tr } from '../i18n';
 import TutorialMedia from './TutorialMedia';
+import RentalJourney from './RentalJourney';
+import { draftCaptions, recordingScript } from '../lib/tutorial-export.mjs';
 export default function Learning({ language }) {
   const [v, setV] = useState(0),
     [messages, setMessages] = useState([]),
     [chat, setChat] = useState(''),
     [speechError, setSpeechError] = useState(''),
     [search, setSearch] = useState('');
-  const { data: tutorials, error } = useData('/tutorials', v);
+  const { data: tutorials, error, reload } = useData('/tutorials', v);
   const { data: progress } = useData('/progress', v);
   const { data: history } = useData('/ai/history', v);
   const { data: tickets } = useData('/tickets', v);
   const refresh = () => setV((v) => v + 1);
+  const filtered = tutorials?.filter(
+    (t) =>
+      t.language === language &&
+      `${t.title} ${t.category} ${t.summary}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()),
+  );
   const speak = (text) => {
     if (!window.speechSynthesis) {
       setSpeechError(tr('Audio reading is unavailable in this browser', language));
@@ -31,6 +38,7 @@ export default function Learning({ language }) {
         <h1>Confidence in the field.</h1>
         <p>Reviewed instructions and a clear path to support.</p>
       </div>
+      <RentalJourney />
       <div className="two">
         <Panel title="FarmIQ assistant">
           <p className="muted">
@@ -132,92 +140,102 @@ export default function Learning({ language }) {
           onChange={(e) => setSearch(e.target.value)}
           type="search"
         />
-        <State data={tutorials} error={error}>
-          {tutorials?.filter((t) => t.language === language).length ? (
-            tutorials
-              .filter(
-                (t) =>
-                  t.language === language &&
-                  `${t.title} ${t.category} ${t.summary}`
-                    .toLocaleLowerCase()
-                    .includes(search.toLocaleLowerCase()),
-              )
-              .map((t) => (
-                <article className="panel" key={t.id}>
-                  <Badge>{t.category}</Badge>
-                  <h2>{t.title}</h2>
-                  <p>{t.summary}</p>
-                  <TutorialMedia tutorial={t} />
-                  {t.audioUrl && <audio controls preload="none" src={t.audioUrl} />}
-                  <ol>
-                    {t.steps.map((s, i) => (
-                      <li key={i}>{s}</li>
-                    ))}
-                  </ol>
-                  <label className="field">
-                    <span>Learning progress</span>
-                    <progress
-                      max={t.steps.length}
-                      value={progress?.find((p) => p.tutorialId === t.id)?.completedSteps || 0}
-                    />
-                  </label>
-                  <p>
-                    <a href={t.sourceUrl} target="_blank" rel="noreferrer">
-                      Original source
-                    </a>
-                  </p>
-                  <div className="row wrap">
-                    <Action
-                      secondary
-                      disabled={!!progress?.find((p) => p.tutorialId === t.id)?.completedAt}
-                      run={() =>
-                        api(`/tutorials/${t.id}/progress`, {
-                          method: 'PUT',
-                          body: {
-                            completedSteps: Math.min(
-                              t.steps.length,
-                              (progress?.find((p) => p.tutorialId === t.id)?.completedSteps || 0) + 1,
-                            ),
-                          },
-                        })
-                      }
-                      done={refresh}
-                    >
-                      Mark next step reviewed
-                    </Action>
-                    <Button secondary onClick={() => speak(t.title + '. ' + t.steps.join('. '))}>
-                      Read aloud
-                    </Button>
-                    <Button
-                      secondary
-                      onClick={() =>
-                        download(
-                          `${t.title}.txt`,
-                          `${t.title}\n${t.summary}\n\n${t.steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}\nSource: ${t.sourceUrl}`,
-                        )
-                      }
-                    >
-                      Download guide
-                    </Button>
-                    <Action
-                      run={() =>
-                        api(`/tutorials/${t.id}/progress`, {
-                          method: 'PUT',
-                          body: { completedSteps: t.steps.length },
-                        })
-                      }
-                      done={refresh}
-                    >
-                      {progress?.some((p) => p.tutorialId === t.id && p.completedAt)
-                        ? 'Completed ✓'
-                        : 'Mark reviewed'}
-                    </Action>
-                  </div>
-                  <small>
-                    Review completion records learning progress; it is not an operator certification.
-                  </small>
-                </article>
-              ))
+        <State data={tutorials} error={error} retry={reload}>
+          {filtered?.length ? (
+            filtered.map((t) => (
+              <article className="panel" key={t.id}>
+                <Badge>{t.category}</Badge>
+                <h2>{t.title}</h2>
+                <p>{t.summary}</p>
+                <TutorialMedia tutorial={t} />
+                {t.audioUrl && <audio controls preload="none" src={t.audioUrl} />}
+                <ol>
+                  {t.steps.map((s, i) => (
+                    <li key={i}>{s}</li>
+                  ))}
+                </ol>
+                <label className="field">
+                  <span>Learning progress</span>
+                  <progress
+                    max={t.steps.length}
+                    value={progress?.find((p) => p.tutorialId === t.id)?.completedSteps || 0}
+                  />
+                </label>
+                <p>
+                  <a href={t.sourceUrl} target="_blank" rel="noreferrer">
+                    Original source
+                  </a>
+                </p>
+                <div className="row wrap">
+                  <Action
+                    secondary
+                    disabled={!!progress?.find((p) => p.tutorialId === t.id)?.completedAt}
+                    run={() =>
+                      api(`/tutorials/${t.id}/progress`, {
+                        method: 'PUT',
+                        body: {
+                          completedSteps: Math.min(
+                            t.steps.length,
+                            (progress?.find((p) => p.tutorialId === t.id)?.completedSteps || 0) + 1,
+                          ),
+                        },
+                      })
+                    }
+                    done={refresh}
+                  >
+                    Mark next step reviewed
+                  </Action>
+                  <Button secondary onClick={() => speak(t.title + '. ' + t.steps.join('. '))}>
+                    Read aloud
+                  </Button>
+                  <Button
+                    secondary
+                    onClick={() =>
+                      download(
+                        `${t.title}.txt`,
+                        `${t.title}\n${t.summary}\n\n${t.steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}\nSource: ${t.sourceUrl}`,
+                      )
+                    }
+                  >
+                    Download guide
+                  </Button>
+                  <Action
+                    run={() =>
+                      api(`/tutorials/${t.id}/progress`, {
+                        method: 'PUT',
+                        body: { completedSteps: t.steps.length },
+                      })
+                    }
+                    done={refresh}
+                  >
+                    {progress?.some((p) => p.tutorialId === t.id && p.completedAt)
+                      ? 'Completed ✓'
+                      : 'Mark reviewed'}
+                  </Action>
+                </div>
+                <small>
+                  Review completion records learning progress; it is not an operator certification.
+                </small>
+                {t.id.startsWith('farmiq-guide-') && (
+                  <details>
+                    <summary>Download recording script</summary>
+                    <p>
+                      Draft captions use suggested timing. Align them to your recording before publishing.
+                    </p>
+                    <div className="row wrap">
+                      <Button secondary onClick={() => download(`${t.id}-script.txt`, recordingScript(t))}>
+                        Download recording script
+                      </Button>
+                      <Button secondary onClick={() => download(`${t.id}.vtt`, draftCaptions(t), 'text/vtt')}>
+                        Download draft captions
+                      </Button>
+                    </div>
+                  </details>
+                )}
+              </article>
+            ))
+          ) : search.trim() ? (
+            <Empty>No matching learning guides.</Empty>
           ) : (
             <Empty>
               No reviewed tutorials are published in this language yet. Administrators can add source-backed

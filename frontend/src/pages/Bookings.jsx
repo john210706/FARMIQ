@@ -8,7 +8,7 @@ export default function Bookings({ navigate, user }) {
   const [version, setVersion] = useState(0),
     [filter, setFilter] = useState('');
   const driver = user.role === 'DRIVER';
-  const { data, error } = useData(driver ? '/driver/deliveries' : '/bookings', version);
+  const { data, error, reload } = useData(driver ? '/driver/deliveries' : '/bookings', version);
   const statuses = driver
     ? [
         'ASSIGNED',
@@ -60,7 +60,7 @@ export default function Bookings({ navigate, user }) {
           Refresh
         </Button>
       </div>
-      <State data={data} error={error}>
+      <State data={data} error={error} retry={reload}>
         {data?.filter((b) => !filter || b.status === filter).length ? (
           <div className="stack">
             {data
@@ -126,11 +126,11 @@ export function BookingDetail({ id, user, navigate }) {
     [message, setMessage] = useState(''),
     [gps, setGps] = useState(false),
     [cancelQuote, setCancelQuote] = useState(null);
-  const { data: b, error } = useData(`/bookings/${id}`, version, true);
+  const { data: b, error, reload } = useData(`/bookings/${id}`, version, true);
   const refresh = () => setVersion((v) => v + 1);
   useEffect(() => {
     const timer = setInterval(() => {
-      if (document.visibilityState === 'visible') refresh();
+      if (navigator.onLine && document.visibilityState === 'visible') refresh();
     }, 5000);
     return () => clearInterval(timer);
   }, []);
@@ -173,7 +173,7 @@ export function BookingDetail({ id, user, navigate }) {
   const assignment = b?.history.findLast((event) => event.toStatus === 'ASSIGNED');
   const returning = ['RETURN_INSPECTION', 'RETURN_IN_TRANSIT', 'RETURNED'].includes(b?.status);
   return (
-    <State data={b} error={error}>
+    <State data={b} error={error} retry={reload}>
       {b && (
         <>
           <div className="row spread">

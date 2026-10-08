@@ -173,51 +173,79 @@ router.post('/demo/relocate', requireAuth(['FARMER']), async (req, res) => {
   const owner = await prisma.user.findUnique({ where: { accountId: 'DEMO-OWNER' } });
   const baseDriver = await prisma.user.findUnique({ where: { accountId: 'DEMO-DRIVER' } });
   if (!owner || !baseDriver) fail(409, 'Run the demo seed before preparing nearby machinery');
-  await prisma.$transaction([
-    ...demoOperators.map((operator) => {
-      const data = { ...operator, active: true, verificationStatus: 'VERIFIED' };
-      return prisma.operator.upsert({ where: { id: operator.id }, create: data, update: data });
-    }),
-    ...demoMachines.map((machine) => {
-      const data = machineData(machine, owner.id, point.latitude, point.longitude);
-      return prisma.machinery.upsert({
-        where: { id: machine.id },
-        update: data,
-        create: { id: machine.id, ...data },
-      });
-    }),
-    ...demoDrivers.map(([accountId, fullName, phone, latOffset, lngOffset]) =>
-      prisma.user.upsert({
-        where: { accountId },
-        update: {
-          latitude: point.latitude + latOffset,
-          longitude: point.longitude + lngOffset,
-          locationUpdatedAt: new Date(),
-          onDuty: true,
-          active: true,
-          verificationStatus: 'VERIFIED',
-        },
-        create: {
-          accountId,
-          fullName,
-          phone,
-          role: 'DRIVER',
-          passwordHash: baseDriver.passwordHash,
-          latitude: point.latitude + latOffset,
-          longitude: point.longitude + lngOffset,
-          locationUpdatedAt: new Date(),
-          onDuty: true,
-          verificationStatus: 'VERIFIED',
-        },
+  const result = await booking.serial(async (tx) => {
+    const active = await tx.booking.findMany({
+      where: {
+        status: { in: activeStatuses },
+        OR: [
+          { machineryId: { in: demoMachines.map((m) => m.id) } },
+          { driver: { accountId: { in: demoDrivers.map((d) => d[0]) } } },
+        ],
+      },
+      select: { machineryId: true, driverId: true },
+    });
+    const busyMachines = new Set(active.map((b) => b.machineryId));
+    const busyDrivers = new Set(active.map((b) => b.driverId));
+    const existingDrivers = await tx.user.findMany({
+      where: { accountId: { in: demoDrivers.map((d) => d[0]) } },
+      select: { id: true, accountId: true },
+    });
+    const availableMachines = demoMachines.filter((m) => !busyMachines.has(m.id));
+    const availableDrivers = demoDrivers.filter(
+      (d) => !busyDrivers.has(existingDrivers.find((u) => u.accountId === d[0])?.id),
+    );
+    await Promise.all([
+      ...demoOperators.map((operator) => {
+        const data = { ...operator, active: true, verificationStatus: 'VERIFIED' };
+        return tx.operator.upsert({ where: { id: operator.id }, create: data, update: data });
       }),
-    ),
-    prisma.setting.upsert({
-      where: { key: 'dispatch' },
-      update: { value: { enabled: true, radiusKm: 30, horizonHours: 48 } },
-      create: { key: 'dispatch', value: { enabled: true, radiusKm: 30, horizonHours: 48 } },
-    }),
-  ]);
-  res.json({ ok: true, machineCount: demoMachines.length, driverReady: true });
+      ...availableMachines.map((machine) => {
+        const data = machineData(machine, owner.id, point.latitude, point.longitude);
+        return tx.machinery.upsert({
+          where: { id: machine.id },
+          update: data,
+          create: { id: machine.id, ...data },
+        });
+      }),
+      ...availableDrivers.map(([accountId, fullName, phone, latOffset, lngOffset]) =>
+        tx.user.upsert({
+          where: { accountId },
+          update: {
+            latitude: point.latitude + latOffset,
+            longitude: point.longitude + lngOffset,
+            locationUpdatedAt: new Date(),
+            onDuty: true,
+            active: true,
+            verificationStatus: 'VERIFIED',
+          },
+          create: {
+            accountId,
+            fullName,
+            phone,
+            role: 'DRIVER',
+            passwordHash: baseDriver.passwordHash,
+            latitude: point.latitude + latOffset,
+            longitude: point.longitude + lngOffset,
+            locationUpdatedAt: new Date(),
+            onDuty: true,
+            verificationStatus: 'VERIFIED',
+          },
+        }),
+      ),
+      tx.setting.upsert({
+        where: { key: 'dispatch' },
+        update: { value: { enabled: true, radiusKm: 30, horizonHours: 48 } },
+        create: { key: 'dispatch', value: { enabled: true, radiusKm: 30, horizonHours: 48 } },
+      }),
+    ]);
+    return {
+      ok: true,
+      machineCount: availableMachines.length,
+      driverCount: availableDrivers.length,
+      preservedMachines: demoMachines.length - availableMachines.length,
+    };
+  });
+  res.json(result);
 });
 router.get('/bookings', requireAuth(['FARMER', 'OWNER', 'ADMIN']), async (req, res) =>
   res.json(
@@ -325,11 +353,14 @@ router.get('/bookings/:id/cancellation', async (req, res) =>
   res.json(cancellation(await booking.get(prisma, req.params.id, req.user))),
 );
 router.post('/bookings/:id/handover-code', requireAuth(['FARMER', 'OWNER']), async (req, res) => {
-  const b = await booking.get(prisma, req.params.id, req.user);
-  const stage = req.user.role === 'OWNER' ? 'RETURN_IN_TRANSIT' : 'IN_TRANSIT';
-  if (b.status !== stage) fail(409, 'Generate the code when the driver is on the way');
-  const code = String(crypto.randomInt(100000, 1000000));
-  await prisma.booking.update({ where: { id: b.id }, data: { handoverCodeHash: digest(code) } });
+  const code = await booking.serial(async (tx) => {
+    const b = await booking.get(tx, req.params.id, req.user);
+    const stage = req.user.role === 'OWNER' ? 'RETURN_IN_TRANSIT' : 'IN_TRANSIT';
+    if (b.status !== stage) fail(409, 'Generate the code when the driver is on the way');
+    const value = String(crypto.randomInt(100000, 1000000));
+    await tx.booking.update({ where: { id: b.id }, data: { handoverCodeHash: digest(value) } });
+    return value;
+  });
   res.json({ code });
 });
 router.post('/bookings/:id/inspections', async (req, res) => {

@@ -25,6 +25,12 @@ test('administrator dispatch and finance controls load without layout overflow',
   await page.getByLabel('Password', { exact: true }).fill('FarmIQ-demo-2026');
   await page.getByRole('button', { name: 'Sign in', exact: true }).last().click();
   await page.getByRole('button', { name: 'Open administration →' }).click();
+  await page.getByLabel('Search loaded records').fill('DEMO-DRIVER-2');
+  await expect(page.getByText('DEMO-DRIVER-2 · DRIVER')).toBeVisible();
+  await expect(page.getByText('DEMO-FARMER · FARMER')).toHaveCount(0);
+  const summaryDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export summary' }).click();
+  expect((await summaryDownload).suggestedFilename()).toBe('farmiq-users-summary.json');
   await page.getByRole('button', { name: 'Dispatch & finance', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Automatic dispatch', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save dispatch settings' })).toBeVisible({ timeout: 15_000 });
@@ -84,7 +90,7 @@ test('driver account is limited to its delivery workspace', async ({ page }) => 
   await expect(page.getByText('Low-data mode (hide catalogue photos)')).toHaveCount(0);
   await expect(page.getByRole('option', { name: 'OWNERSHIP' })).toHaveCount(0);
 });
-test('learning guides are localized and persist step progress', async ({ page }) => {
+test('learning guides are localized and persist step progress', async ({ page }, testInfo) => {
   test.skip(!process.env.E2E_WITH_API, 'Requires isolated database and starter learning content');
   await page.goto('/');
   await page.getByLabel('Mobile number or account ID').fill('DEMO-FARMER');
@@ -92,12 +98,21 @@ test('learning guides are localized and persist step progress', async ({ page })
   await page.getByRole('button', { name: 'Sign in', exact: true }).last().click();
   await expect(page.getByRole('heading', { name: 'Hello, Ravi.' })).toBeVisible();
   await page.goto('/#learning');
+  await expect(page.getByRole('heading', { name: 'Rental journey' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Book equipment in FarmIQ' })).toBeVisible();
+  await page.getByLabel('Search learning guides').fill('not-a-real-guide');
+  await expect(page.getByText('No matching learning guides.')).toBeVisible();
+  await page.getByLabel('Search learning guides').fill('');
+  await page.screenshot({ path: testInfo.outputPath('learning.png'), fullPage: false });
   const guide = page
     .locator('article')
     .filter({ has: page.getByRole('heading', { name: 'Book equipment in FarmIQ' }) });
   await guide.getByRole('button', { name: 'Mark next step reviewed' }).click();
   await expect(guide.locator('progress')).toHaveAttribute('value', /[1-5]/);
+  await guide.locator('summary').click();
+  const captionsDownload = page.waitForEvent('download');
+  await guide.getByRole('button', { name: 'Download draft captions' }).click();
+  expect((await captionsDownload).suggestedFilename()).toBe('farmiq-guide-booking-en.vtt');
   await page.reload();
   await expect(guide.locator('progress')).toHaveAttribute('value', /[1-5]/);
   await page.getByRole('combobox', { name: 'Language', exact: true }).selectOption('ta');
@@ -153,7 +168,9 @@ test('real account sign-in shows working scoped dashboard and can sign out', asy
   await expect(page.getByLabel('Longitude')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /farm location|current location/i })).toBeVisible();
   await expect(
-    page.getByText('Demo machinery and the nearest delivery partner are ready near your farm.'),
+    page.getByText(
+      'Demo locations refreshed. Active rentals keep their original pickup and driver locations.',
+    ),
   ).toBeVisible({ timeout: 15_000 });
   await expect(page.getByLabel('Farm address', { exact: true })).toHaveValue(
     'Demo farm, Bengaluru, Karnataka, India',

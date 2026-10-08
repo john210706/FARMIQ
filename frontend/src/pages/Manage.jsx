@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Operations, { Finance } from './Operations';
-import { api, money, when, openDocument } from '../lib/api';
+import { api, money, when, openDocument, download } from '../lib/api';
 import { useData, State, Panel, Field, Button, Action, Form, Badge, Empty } from '../ui';
 import { LocationPicker } from '../location';
 import TutorialEditor from './TutorialEditor';
@@ -249,6 +249,8 @@ export default function Fleet() {
 }
 export function Admin() {
   const [tab, setTab] = useState('users'),
+    [search, setSearch] = useState(''),
+    [status, setStatus] = useState(''),
     [version, setVersion] = useState(0),
     [notice, setNotice] = useState(''),
     [assistedAddress, setAssistedAddress] = useState(''),
@@ -264,7 +266,36 @@ export function Admin() {
     tutorials: '/admin/tutorials',
     operations: '/bookings',
   };
-  const { data, error } = useData(paths[tab], version);
+  const { data, error, reload } = useData(paths[tab], version);
+  const stateOf = (item) =>
+    item.verificationStatus ||
+    item.status ||
+    (typeof item.published === 'boolean' ? (item.published ? 'PUBLISHED' : 'DRAFT') : '—');
+  const filtered = data?.filter(
+    (item) =>
+      (!status || stateOf(item) === status) &&
+      [
+        item.id,
+        item.fullName,
+        item.accountId,
+        item.name,
+        item.title,
+        item.filename,
+        item.message,
+        item.action,
+        item.role,
+        item.machinery?.name,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase()
+        .includes(search.trim().toLocaleLowerCase()),
+  );
+  const switchTab = (next) => {
+    setTab(next);
+    setSearch('');
+    setStatus('');
+  };
   return (
     <>
       <div className="page-heading">
@@ -273,11 +304,11 @@ export function Admin() {
         <p>Every approval and sensitive action is recorded.</p>
       </div>
       <div className="tabs">
-        <Button secondary={tab !== 'dispatch'} onClick={() => setTab('dispatch')}>
+        <Button secondary={tab !== 'dispatch'} onClick={() => switchTab('dispatch')}>
           Dispatch & finance
         </Button>
         {Object.keys(paths).map((t) => (
-          <Button key={t} secondary={tab !== t} onClick={() => setTab(t)}>
+          <Button key={t} secondary={tab !== t} onClick={() => switchTab(t)}>
             {t[0].toUpperCase() + t.slice(1)}
           </Button>
         ))}
@@ -289,10 +320,59 @@ export function Admin() {
       )}
       {tab === 'dispatch' && <Operations />}
       {tab !== 'dispatch' && (
-        <State data={data} error={error}>
+        <State data={data} error={error} retry={reload}>
+          <div className="toolbar">
+            <Field
+              label="Search loaded records"
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Field label="Status">
+              <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                <option value="">All statuses</option>
+                {[...new Set((data || []).map(stateOf))].sort().map((value) => (
+                  <option key={value}>{value}</option>
+                ))}
+              </select>
+            </Field>
+            <Button secondary onClick={reload}>
+              Refresh
+            </Button>
+            <Button
+              secondary
+              onClick={() =>
+                download(
+                  `farmiq-${tab}-summary.json`,
+                  JSON.stringify(
+                    {
+                      generatedAt: new Date().toISOString(),
+                      section: tab,
+                      scope: 'Loaded records only',
+                      loaded: data.length,
+                      matching: filtered.length,
+                      byStatus: filtered.reduce((counts, item) => {
+                        const value = stateOf(item);
+                        counts[value] = (counts[value] || 0) + 1;
+                        return counts;
+                      }, {}),
+                    },
+                    null,
+                    2,
+                  ),
+                  'application/json',
+                )
+              }
+            >
+              Export summary
+            </Button>
+          </div>
+          <p className="muted">
+            {filtered?.length} / {data?.length} · <span>Loaded records only</span>
+          </p>
           <div className="stack">
-            {data?.length === 0 && <Empty>Nothing to review.</Empty>}
-            {data?.map((item) => (
+            {filtered?.length === 0 && <Empty>No matching records.</Empty>}
+            {filtered?.map((item) => (
               <Panel
                 key={item.id}
                 title={

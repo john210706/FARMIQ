@@ -13,6 +13,8 @@ export function saveSession(value) {
   localStorage.removeItem('farmiqSession');
 }
 export async function api(path, options = {}) {
+  if (!navigator.onLine && !['GET', 'HEAD'].includes((options.method || 'GET').toUpperCase()))
+    throw new Error(tr('You are offline. Reconnect and submit again; no changes were sent.'));
   const token = getSession()?.token;
   const form = options.body instanceof FormData;
   let response;
@@ -31,16 +33,14 @@ export async function api(path, options = {}) {
     if (error.name === 'AbortError') throw error;
     throw new Error(tr('Cannot reach FarmIQ. Check your connection and try again.'));
   }
-  const data = await response
-    .json()
-    .catch(() => ({
-      error:
-        response.status === 429
-          ? 'Too many requests. Please wait a minute and try again.'
-          : [502, 503, 504].includes(response.status)
-            ? 'FarmIQ is temporarily unavailable. Please try again shortly.'
-            : 'Unexpected server response',
-    }));
+  const data = await response.json().catch(() => ({
+    error:
+      response.status === 429
+        ? 'Too many requests. Please wait a minute and try again.'
+        : [502, 503, 504].includes(response.status)
+          ? 'FarmIQ is temporarily unavailable. Please try again shortly.'
+          : 'Unexpected server response',
+  }));
   if (response.status === 401) {
     saveSession(null);
     window.dispatchEvent(new Event('session-expired'));

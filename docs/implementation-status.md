@@ -1,6 +1,8 @@
-# FarmIQ implementation status — 3 October 2026
+# FarmIQ implementation status — 8 October 2026
 
 This is a substantial working MVP upgrade, not completion of every production capability in the earlier assessment. The previous numerical maturity estimates were informal; this checklist replaces them with testable scope.
+
+The [8 October no-signup improvements](october-8-improvements.md) add lazy-loaded pages, targeted translation updates, read retry/reconnection, protected saved locations and active demo rentals, illustrated guides/script/caption exports, searchable admin records and expanded regression coverage. See the [demonstration walkthrough](demo-walkthrough.md).
 
 The October update adds provider-managed Twilio Verify challenges, signed STOP/START consent handling, editable tutorial media with click-to-load YouTube playback, nine localized walkthroughs, optional private Supabase Storage/ClamAV integration, request logging, graceful shutdown, and one-command isolated full verification. See [integration setup](integrations.md) for activation and limitations.
 

@@ -1,29 +1,60 @@
 import React, { useEffect, useState } from 'react';
 import { api } from './lib/api';
 import { tr } from './i18n';
+export class PageBoundary extends React.Component {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? (
+      <div className="notice error" role="alert">
+        <p>{tr('This page could not load. Reconnect and reload the page.')}</p>
+        <Button secondary onClick={() => window.location.reload()}>
+          {tr('Try again')}
+        </Button>
+      </div>
+    ) : (
+      this.props.children
+    );
+  }
+}
 export function useData(path, version = 0, retainPrevious = false) {
   const [data, setData] = useState(null),
-    [error, setError] = useState('');
+    [error, setError] = useState(''),
+    [attempt, setAttempt] = useState(0);
+  const reload = () => setAttempt((value) => value + 1);
+  useEffect(() => {
+    window.addEventListener('online', reload);
+    return () => window.removeEventListener('online', reload);
+  }, []);
   useEffect(() => {
     let live = true;
+    const controller = new AbortController();
     if (!retainPrevious) setData(null);
     setError('');
     if (!path) return;
-    api(path)
+    api(path, { signal: controller.signal })
       .then((v) => live && setData(v))
-      .catch((e) => live && setError(e.message));
+      .catch((e) => live && e.name !== 'AbortError' && setError(e.message));
     return () => {
       live = false;
+      controller.abort();
     };
-  }, [path, version, retainPrevious]);
-  return { data, error, setData };
+  }, [path, version, retainPrevious, attempt]);
+  return { data, error, setData, reload };
 }
-export function State({ data, error, children }) {
+export function State({ data, error, children, retry }) {
   if (error)
     return (
-      <p className="notice error" role="alert">
+      <div className="notice error" role="alert">
         {tr(error)}
-      </p>
+        {retry && (
+          <Button secondary onClick={retry}>
+            {tr('Try again')}
+          </Button>
+        )}
+      </div>
     );
   if (data === null)
     return (
