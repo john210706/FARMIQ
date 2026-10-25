@@ -12,7 +12,7 @@ const busyStatuses = [
   'RETURNED',
   'DISPUTED',
 ];
-const defaults = { enabled: true, radiusKm: 30, horizonHours: 24 };
+const defaults = { enabled: true, radiusKm: 50, horizonHours: 720 };
 async function run(actor) {
   const setting = await prisma.setting.findUnique({ where: { key: 'dispatch' } });
   const options = { ...defaults, ...setting?.value };
@@ -21,7 +21,7 @@ async function run(actor) {
     where: {
       status: 'PAID',
       driverId: null,
-      scheduledAt: { gte: new Date(), lte: new Date(Date.now() + options.horizonHours * 3600000) },
+      scheduledAt: { gte: new Date(Date.now() - 86400000), lte: new Date(Date.now() + (options.horizonHours || 720) * 3600000) },
     },
     orderBy: { scheduledAt: 'asc' },
     take: 50,

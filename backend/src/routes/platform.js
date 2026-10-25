@@ -234,8 +234,8 @@ router.post('/demo/relocate', requireAuth(['FARMER']), async (req, res) => {
       ),
       tx.setting.upsert({
         where: { key: 'dispatch' },
-        update: { value: { enabled: true, radiusKm: 30, horizonHours: 48 } },
-        create: { key: 'dispatch', value: { enabled: true, radiusKm: 30, horizonHours: 48 } },
+        update: { value: { enabled: true, radiusKm: 50, horizonHours: 720 } },
+        create: { key: 'dispatch', value: { enabled: true, radiusKm: 50, horizonHours: 720 } },
       }),
     ]);
     return {
