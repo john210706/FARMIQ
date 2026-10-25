@@ -51,7 +51,6 @@ async function run(actor) {
           active: true,
           onDuty: true,
           verificationStatus: 'VERIFIED',
-          locationUpdatedAt: { gte: new Date(Date.now() - 300000) },
           latitude: { not: null },
           longitude: { not: null },
         },

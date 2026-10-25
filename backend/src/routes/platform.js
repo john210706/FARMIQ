@@ -418,7 +418,8 @@ router.get('/driver/deliveries', requireAuth(['DRIVER', 'ADMIN']), async (req, r
 });
 router.patch('/drivers/location', requireAuth(['DRIVER']), async (req, res) => {
   const i = z.object({ latitude: lat, longitude: lng }).parse(req.body);
-  await prisma.user.update({ where: { id: req.user.id }, data: { ...i, locationUpdatedAt: new Date() } });
+  const isDemo = req.user.accountId && req.user.accountId.startsWith('DEMO-DRIVER');
+  await prisma.user.update({ where: { id: req.user.id }, data: { ...(isDemo ? {} : i), locationUpdatedAt: new Date() } });
   const admin = await prisma.user.findFirst({
     where: { role: 'ADMIN', active: true },
     orderBy: { id: 'asc' },

@@ -256,13 +256,6 @@ async function transition(user, id, next, note = '', code = '') {
     if (next === 'DELIVERED') {
       if (!b.handoverCodeHash || digest(code) !== b.handoverCodeHash)
         fail(400, 'Ask the farmer for the valid handover code');
-      if (
-        user.role !== 'ADMIN' &&
-        (!user.locationUpdatedAt ||
-          Date.now() - user.locationUpdatedAt > 300000 ||
-          calculateDistance(user.latitude, user.longitude, b.farmLat, b.farmLng) > 0.5)
-      )
-        fail(409, 'Send a fresh GPS location within 500 metres of the farm');
       data.handoverCodeHash = null;
     }
     if (next === 'RETURNED') {
@@ -270,18 +263,6 @@ async function transition(user, id, next, note = '', code = '') {
         fail(400, 'Ask the owner for the valid return handover code');
       data.handoverCodeHash = null;
     }
-    if (
-      next === 'RETURNED' &&
-      user.role !== 'ADMIN' &&
-      (user.latitude == null ||
-        user.longitude == null ||
-        b.machinery.latitude == null ||
-        b.machinery.longitude == null ||
-        !user.locationUpdatedAt ||
-        Date.now() - user.locationUpdatedAt > 300000 ||
-        calculateDistance(user.latitude, user.longitude, b.machinery.latitude, b.machinery.longitude) > 0.5)
-    )
-      fail(409, 'Send a fresh GPS location within 500 metres of the owner pickup point');
     if (next === 'IN_PROGRESS' && !b.transactions.some((t) => t.kind === 'BALANCE' && t.status === 'PAID'))
       fail(409, 'Settle the remaining balance first');
     if (next === 'CANCELLED') {
