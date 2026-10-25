@@ -10,3 +10,8 @@ tmp/
 backend/uploads/
 playwright-report/
 test-results/
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/

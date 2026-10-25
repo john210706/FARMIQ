@@ -1,0 +1,36 @@
+{
+  "model_architecture": "Stacked Ensemble (LightGBM + XGBoost + Deep MLP Regressor with RidgeCV Meta-Learner)",
+  "samples": 25000,
+  "fuel_metrics": {
+    "r2": 0.9854014779145476,
+    "rmse_litres": 16.791734019952262,
+    "mae_litres": 8.996665645620489
+  },
+  "time_metrics": {
+    "r2": 0.9760237436181852,
+    "rmse_hours": 2.0476508882617495,
+    "mae_hours": 1.2053235155868627
+  },
+  "slip_metrics": {
+    "r2": 0.9628980550090559
+  },
+  "accuracy": 0.887,
+  "macro_f1": 0.892422310327726,
+  "confusion_matrix": [
+    [
+      1425,
+      194,
+      0
+    ],
+    [
+      212,
+      1763,
+      79
+    ],
+    [
+      0,
+      80,
+      1247
+    ]
+  ]
+}

@@ -12,6 +12,7 @@ import {
   Bell,
   LogOut,
   Menu,
+  CloudSun,
 } from 'lucide-react';
 import { api, getSession, saveSession, money, when } from './lib/api';
 import { useData, State, Panel, Button, Action, Badge, Empty, PageBoundary } from './ui';
@@ -24,6 +25,7 @@ const Fleet = lazy(() => import('./pages/Manage'));
 const Admin = lazy(() => import('./pages/Manage').then((m) => ({ default: m.Admin })));
 const Account = lazy(() => import('./pages/Account'));
 const Community = lazy(() => import('./pages/Community'));
+const Weather = lazy(() => import('./pages/Weather'));
 const Learning = lazy(() => import('./pages/Learning'));
 import './workspace.css';
 import { Localizer, tr } from './i18n';
@@ -35,6 +37,7 @@ const labels = {
     bookings: 'My bookings',
     fleet: 'My fleet',
     community: 'Field planner',
+    weather: 'Weather forecast',
     learning: 'Learn & get help',
     admin: 'Administration',
     account: 'My account',
@@ -46,6 +49,7 @@ const labels = {
     bookings: 'முன்பதிவுகள்',
     fleet: 'என் இயந்திரங்கள்',
     community: 'வயல் திட்டம்',
+    weather: 'வானிலை முன்னறிவிப்பு',
     learning: 'பயிற்சி & உதவி',
     admin: 'நிர்வாகம்',
     account: 'என் கணக்கு',
@@ -57,6 +61,7 @@ const labels = {
     bookings: 'मेरी बुकिंग',
     fleet: 'मेरी मशीनें',
     community: 'खेत की योजना',
+    weather: 'मौसम पूर्वानुमान',
     learning: 'सीखें और सहायता',
     admin: 'प्रशासन',
     account: 'मेरा खाता',
@@ -69,16 +74,17 @@ const icons = {
   bookings: CalendarDays,
   fleet: Wrench,
   community: Users,
+  weather: CloudSun,
   learning: BookOpen,
   admin: ShieldCheck,
   account: User,
   notifications: Bell,
 };
 const roleNavigation = {
-  FARMER: ['dashboard', 'catalog', 'bookings', 'community', 'learning', 'notifications', 'account'],
-  OWNER: ['dashboard', 'catalog', 'bookings', 'fleet', 'community', 'learning', 'notifications', 'account'],
+  FARMER: ['dashboard', 'catalog', 'bookings', 'community', 'weather', 'learning', 'notifications', 'account'],
+  OWNER: ['dashboard', 'catalog', 'bookings', 'fleet', 'community', 'weather', 'learning', 'notifications', 'account'],
   DRIVER: ['dashboard', 'bookings', 'notifications', 'account'],
-  ADMIN: ['dashboard', 'catalog', 'bookings', 'community', 'learning', 'admin', 'notifications', 'account'],
+  ADMIN: ['dashboard', 'catalog', 'bookings', 'community', 'weather', 'learning', 'admin', 'notifications', 'account'],
 };
 const roleRoutes = {
   FARMER: [...roleNavigation.FARMER, 'machine', 'booking'],
@@ -201,6 +207,7 @@ export default function Workspace() {
   else if (screen === 'fleet' && user.role === 'OWNER') content = <Fleet />;
   else if (screen === 'admin' && user.role === 'ADMIN') content = <Admin />;
   else if (screen === 'community') content = <Community user={user} navigate={navigate} />;
+  else if (screen === 'weather') content = <Weather />;
   else if (screen === 'learning') content = <Learning language={language} />;
   else if (screen === 'account')
     content = <Account user={user} onUser={onUser} onLogout={logout} navigate={navigate} />;

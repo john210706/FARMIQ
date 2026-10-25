@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n api,web \"npm run dev -w farmiq-backend\" \"npm run dev -w farmiq-frontend\"",
+    "dev:all": "concurrently -k -n ml,api,web \"npm run ml:serve\" \"npm run dev -w farmiq-backend\" \"npm run dev -w farmiq-frontend\"",
     "dev:web": "npm run dev -w farmiq-frontend",
+    "ml:data": "python ml/generate_dataset.py",
+    "ml:train": "python ml/train_engine.py",
+    "ml:serve": "python ml/service.py",
     "build": "npm run build -w farmiq-frontend",
     "preview": "npm run preview -w farmiq-frontend",
     "test": "npm run test -w farmiq-backend",
