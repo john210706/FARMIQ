@@ -11,7 +11,18 @@ async function start() {
     );
     process.exit(1);
   }
-  await prisma.$connect();
+  let retries = 5;
+  while (retries > 0) {
+    try {
+      await prisma.$connect();
+      break;
+    } catch (err) {
+      retries--;
+      if (retries === 0) throw err;
+      console.log(`Database connecting... retrying in 3s (${retries} attempts left)`);
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+  }
   await require('./services/storage').check();
   stopWorker = require('./services/worker').start();
   server = app.listen(PORT, () => console.log(`FarmIQ API running at http://localhost:${PORT}`));
